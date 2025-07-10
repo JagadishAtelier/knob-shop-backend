@@ -1,0 +1,4 @@
+mongo db 
+username: prasanthatelier
+password: UdgSr0uIinhNQZ4O
+URI: mongodb+srv://prasanthatelier:UdgSr0uIinhNQZ4O@knobsshopcluter.bcscoqn.mongodb.net/
