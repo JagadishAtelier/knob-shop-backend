@@ -28,7 +28,7 @@ knobsshop\_backend/
 ### 1. **Clone the Repository**
 
 ```bash
-git clone https://github.com/your-username/knobsshop_backend.git
+git clone https://github.com/Atelier-Creation/knob-shop-Backend.git
 cd knobsshop_backend
 ````
 
