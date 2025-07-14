@@ -3,12 +3,13 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const morgan = require("morgan");
 const helmet = require("helmet");
-
 const connectDB = require("./config/db");
 const errorHandler = require("./middlewares/errorHandler");
 const productRoutes = require("./routes/productRoutes");
 const reviewRoutes = require('./routes/reviewRoutes');
 const adminReviewRoutes = require('./routes/adminReviewRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const authRoutes = require("./routes/authRoutes");
 
 dotenv.config();
 connectDB();
@@ -16,6 +17,7 @@ connectDB();
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
@@ -28,7 +30,8 @@ app.get("/api/status", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/auth",authRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin/reviews', adminReviewRoutes);
@@ -75,8 +78,6 @@ app.use("/", (req, res) => {
     </html>
   `);
 });
-
 app.use(errorHandler);
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port crtl + click this url http://localhost:${PORT}`));

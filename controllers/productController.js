@@ -5,7 +5,7 @@ exports.createProduct = async (req, res) => {
   try {
     const product = new Product({
       ...req.body,
-      createdBy: req.user._id, // assumes user is attached to req via auth middleware
+      createdBy: req.user._id, 
     });
     const savedProduct = await product.save();
     res.status(201).json(savedProduct);
@@ -68,6 +68,8 @@ exports.deleteProduct = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
+    console.log(`Fetching products for category ID: ${categoryId}`);
+    
 
     const products = await Product.find({ category: categoryId })
       .populate('category') // Populate category details
