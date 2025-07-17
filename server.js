@@ -12,7 +12,8 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const adminReviewRoutes = require('./routes/adminReviewRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const authRoutes = require("./routes/authRoutes");
-const orderRoutes = require('./routes/orderRoutes')
+const orderRoutes = require('./routes/orderRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 dotenv.config();
 connectDB();
 
@@ -42,7 +43,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin/reviews', adminReviewRoutes);
-app.use('/api', orderRoutes);
+app.use('/api/order', orderRoutes);
+app.use('/api/cart', cartRoutes);
 app.use("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>

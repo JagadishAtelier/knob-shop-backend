@@ -4,6 +4,8 @@ const {
   login,
   forgotPassword,
   resetPassword,
+  getUserByIdWithCart,
+  getAllUsersWithCart
 } = require("../controllers/authController");
 
 const router = express.Router();
@@ -12,7 +14,7 @@ const router = express.Router();
  * @swagger
  * tags:
  *   name: Auth
- *   description: Authentication endpoints
+ *   description: Authentication and User Management
  */
 
 /**
@@ -142,5 +144,42 @@ router.post("/forgot-password", forgotPassword);
  *         description: Invalid or expired OTP
  */
 router.post("/reset-password", resetPassword);
+
+/**
+ * @swagger
+ * /auth/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: List of all users
+ *       500:
+ *         description: Failed to fetch users
+ */
+router.get("/users", getAllUsersWithCart);
+
+/**
+ * @swagger
+ * /auth/user/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The user ID
+ *     responses:
+ *       200:
+ *         description: User found
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Failed to fetch user
+ */
+router.get("/user/:id", getUserByIdWithCart);
 
 module.exports = router;
