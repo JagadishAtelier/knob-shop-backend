@@ -2,7 +2,7 @@ const User = require("../models/User");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const generateToken = require("../utils/generateToken");
-
+const Cart = require("../models/Cart");
 exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
   const userExists = await User.findOne({ email });
@@ -90,5 +90,51 @@ exports.resetPassword = async (req, res) => {
   await user.save();
 
   res.status(200).json({ message: "Password reset successfully" });
+};
+
+exports.getUserByIdWithCart = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findById(userId).lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const cartItems = await Cart.find({ userId })
+      .populate("productId")
+      .lean();
+
+    res.status(200).json({
+      ...user,
+      cartItems,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch user with cart", error });
+  }
+};
+
+exports.getAllUsersWithCart = async (req, res) => {
+  try {
+    const users = await User.find().lean();
+
+    const usersWithCart = await Promise.all(
+      users.map(async (user) => {
+        const cartItems = await Cart.find({ userId: user._id })
+          .populate("productId")
+          .lean();
+
+        return {
+          ...user,
+          cartItems,
+        };
+      })
+    );
+
+    res.status(200).json(usersWithCart);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch users with cart", error });
+  }
 };
   
