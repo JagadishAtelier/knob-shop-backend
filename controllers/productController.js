@@ -84,3 +84,19 @@ exports.getProductsByCategory = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+exports.shareProductLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    const shareLink = `https://yourfrontend.com/product/${product._id}`;
+    
+    return res.status(200).json({ shareLink });
+  } catch (error) {
+    console.error("Error generating share link:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
