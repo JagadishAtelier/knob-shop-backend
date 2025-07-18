@@ -7,9 +7,19 @@ const orderSchema = new mongoose.Schema({
         required: true,
       },
     items:[
-        { type : String , required : true }
+        {
+        productId : {
+        type : mongoose.Schema.Types.ObjectId , 
+        ref : "Product",
+        required: true
+        },
+        productName : {type : String },
+        quantity : {type : String , required : true },
+        price : { type : Number , required : true },
+        total: {type : Number}
+    }
     ],
-    totalAmount:{ type : String , required : true },
+    totalAmount: { type: Number, required: true },
     shippingAddress:{
         name : {type : String , required : true},
         phone : {type : String , required : true},
@@ -22,5 +32,21 @@ const orderSchema = new mongoose.Schema({
     dtdcReferenceNumber:{ type : String , required : true},
     shippingLabelBase64 : { type : String , required : true},
     labelGenerated :  { type: Boolean, default: false },
+    status : { 
+        type : String,
+        enum : ["pending","confirmed","shipped","delivered","cancelled"],
+        default : "pending"
+    },
+    paymentStatus : {
+        type : String,
+        enum : ["pending","paid","failed"],
+        default : "pending"
+    },
+    paymentMethod :{
+        type : String,
+        enum : ["cod","upi","card","netbanking"],
+        default : "cod"
+    },
+    createdAt: { type: Date, default: Date.now }
 })
 module.exports = mongoose.model("Order", orderSchema);

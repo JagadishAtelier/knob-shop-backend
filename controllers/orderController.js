@@ -8,22 +8,32 @@ const normalize = (str) => str?.trim().toLowerCase();
 const createOrderWithShipping = async (req, res) => {
   try {
     const orderData = req.body;
-    const newOrder = new Order(orderData);
-    await newOrder.save();
+
+    if(!Array.isArray(orderData.items || orderData.items.length === 0)){
+      res.status(500).json({message : "Order must conatin atleast one item"})
+    }
+
+    orderData.items.forEach(item =>{
+      item.total = item.quantity * item.price
+    })
+
+    orderData.totalAmount = orderData.items.reduce((sum,item) => sum + item.total,0)
+
 
     const dtdcResponse = await createDTDCConsignment(orderData);
     const referenceNumber = dtdcResponse.reference_number;
-
     const base64Label = await generateDTDCLabel(referenceNumber);
 
-    newOrder.dtdcReferenceNumber = referenceNumber;
-    newOrder.shippingLabelBase64 = base64Label;
-    newOrder.labelGenerated = true;
+    orderData.dtdcReferenceNumber = referenceNumber;
+    orderData.shippingLabelBase64 = base64Label;
+    orderData.labelGenerated = true;
+
+    const newOrder = new Order(orderData);
     await newOrder.save();
 
     if (orderData.userId && orderData.shippingAddress) {
       const user = await User.findById(orderData.userId).populate('address');
-      const existingAddress = user.address;
+      const existingAddress = user?.address;
 
       const isSameAddress =
         existingAddress &&
