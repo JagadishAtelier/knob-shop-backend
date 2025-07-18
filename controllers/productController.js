@@ -92,7 +92,7 @@ exports.shareProductLink = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    const shareLink = `https://yourfrontend.com/product/${product._id}`;
+    const shareLink = `https://knob-shop-khaki.vercel.app/${product._id}`;
     
     return res.status(200).json({ shareLink });
   } catch (error) {
