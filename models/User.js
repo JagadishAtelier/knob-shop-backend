@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
       }
     }
   ],
+  address : [{type: mongoose.Schema.Types.ObjectId,ref: 'Address'}],
   otp: { type: String },
   otpExpiresAt: { type: Date, index: { expires: 600 } }
 }, { timestamps: true });
