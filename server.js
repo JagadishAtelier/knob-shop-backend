@@ -13,6 +13,7 @@ const adminReviewRoutes = require('./routes/adminReviewRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require('./routes/orderRoutes');
+const policyRoutes = require('./routes/policyRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const adRoutes = require('./routes/adRoutes');
 const wishlistRoutes= require('./routes/wishlistRoutes')
@@ -48,6 +49,7 @@ app.use('/api/admin/reviews', adminReviewRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/ad', adRoutes);
+app.use('/api/policies', policyRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use("/", (req, res) => {
   res.send(`
