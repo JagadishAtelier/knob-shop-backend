@@ -40,7 +40,7 @@ const createDTDCConsignment = async (orderData) => {
             state_name: "Delhi",
             email: "support@yourcompany.com"
           },
-          customer_reference_number: orderData._id, // internal order ID
+          customer_reference_number: orderData._id, 
           cod_collection_mode: "",
           cod_amount: "",
           commodity_id: "99",
