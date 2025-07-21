@@ -9,8 +9,8 @@ const createOrderWithShipping = async (req, res) => {
   try {
     const orderData = req.body;
 
-    if(!Array.isArray(orderData.items || orderData.items.length === 0)){
-      res.status(500).json({message : "Order must conatin atleast one item"})
+    if (!Array.isArray(orderData.items) || orderData.items.length === 0) {
+      return res.status(400).json({ message: "Order must contain at least one item" });
     }
 
     orderData.items.forEach(item =>{
@@ -20,13 +20,13 @@ const createOrderWithShipping = async (req, res) => {
     orderData.totalAmount = orderData.items.reduce((sum,item) => sum + item.total,0)
 
 
-    const dtdcResponse = await createDTDCConsignment(orderData);
-    const referenceNumber = dtdcResponse.reference_number;
-    const base64Label = await generateDTDCLabel(referenceNumber);
+    // const dtdcResponse = await createDTDCConsignment(orderData);
+    // const referenceNumber = dtdcResponse.reference_number;
+    // const base64Label = await generateDTDCLabel(referenceNumber);
 
-    orderData.dtdcReferenceNumber = referenceNumber;
-    orderData.shippingLabelBase64 = base64Label;
-    orderData.labelGenerated = true;
+    // orderData.dtdcReferenceNumber = referenceNumber;
+    // orderData.shippingLabelBase64 = base64Label;
+    // orderData.labelGenerated = true;
 
     const newOrder = new Order(orderData);
     await newOrder.save();
