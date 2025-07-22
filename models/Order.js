@@ -14,7 +14,7 @@ const orderSchema = new mongoose.Schema({
         required: true
         },
         productName : {type : String },
-        quantity : {type : String , required : true },
+        quantity : {type : Number , required : true },
         price : { type : Number , required : true },
         total: {type : Number}
     }
@@ -29,8 +29,8 @@ const orderSchema = new mongoose.Schema({
         pincode : {type : String , required : true },
         state : {type : String , required : true },
     },
-    dtdcReferenceNumber:{ type : String , required : true},
-    shippingLabelBase64 : { type : String , required : true},
+    dtdcReferenceNumber:{ type : String},
+    shippingLabelBase64 : { type : String },
     labelGenerated :  { type: Boolean, default: false },
     status : { 
         type : String,
