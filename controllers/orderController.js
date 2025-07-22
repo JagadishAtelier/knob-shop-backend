@@ -10,7 +10,7 @@ const createOrderWithShipping = async (req, res) => {
     const orderData = req.body;
 
     if (!Array.isArray(orderData.items) || orderData.items.length === 0) {
-      return res.status(400).json({ message: "Order must contain at least one item" });
+      return res.status(400).json({ message: "Order must contain at least one item"});
     }
 
     orderData.items.forEach(item =>{
@@ -55,8 +55,7 @@ const createOrderWithShipping = async (req, res) => {
     res.status(200).json({ message:"Order and shipping label created", order: newOrder })
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Order creation failed", error: error.message })
+    res.status(500).json({ message:"Order creation failed", error: error.message })
   }
 };
-
 module.exports = { createOrderWithShipping };
