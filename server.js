@@ -16,7 +16,8 @@ const orderRoutes = require('./routes/orderRoutes');
 const policyRoutes = require('./routes/policyRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const adRoutes = require('./routes/adRoutes');
-const wishlistRoutes= require('./routes/wishlistRoutes')
+const wishlistRoutes= require('./routes/wishlistRoutes');
+const analyticRoutes = require('./routes/AnalyticRoutes')
 dotenv.config();
 connectDB();
 
@@ -51,6 +52,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/ad', adRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/analytic', analyticRoutes);
 app.use("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
