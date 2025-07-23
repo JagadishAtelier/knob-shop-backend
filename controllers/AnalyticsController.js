@@ -175,11 +175,14 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
             productId,
             name: product?.name || "Unknown",
             price: product?.price || 0,
+            image: product?.images?.[0] || "",       // ✅ get first image from array
+            category: product?.category?.toString() || "", // optionally populate if needed
+            brand: product?.brand || "",
             soldQty: stats.soldQty,
             revenue: stats.revenue,
             changeRate: Math.floor(Math.random() * 30)
           };
-        })
+        })        
     );
 
     const newCustomers = users.length;
