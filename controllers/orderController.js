@@ -58,4 +58,40 @@ const createOrderWithShipping = async (req, res) => {
     res.status(500).json({ message:"Order creation failed", error: error.message })
   }
 };
-module.exports = { createOrderWithShipping };
+
+const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("userId", "name email") // Populate user info if needed
+      .populate("items.productId")      // Populate product details if productId exists
+      .sort({ createdAt: -1 });         // Optional: show latest orders first
+
+    res.status(200).json({ success: true, orders });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch orders", error: error.message });
+  }
+};
+
+const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate("userId", "name email")
+      .populate("items.productId");
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    console.error("Error fetching order by ID:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch order", error: error.message });
+  }
+};
+
+
+
+module.exports = { createOrderWithShipping,getAllOrders,getOrderById };
