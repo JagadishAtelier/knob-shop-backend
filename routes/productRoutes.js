@@ -13,6 +13,48 @@ const { adminOnly } = require('../middlewares/adminMiddleware');
 
 /**
  * @swagger
+ * /products/brochures:
+ *   get:
+ *     summary: Get all product brochures
+ *     description: Returns a list of products with brochures, including name, SKU (productId), and brochure URL.
+ *     tags:
+ *       - Products
+ *     responses:
+ *       200:
+ *         description: List of product brochures
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     example: "Diamond Ring"
+ *                   SKU:
+ *                     type: string
+ *                     example: "DR123456"
+ *                   broucher:
+ *                     type: string
+ *                     format: uri
+ *                     example: "https://cdn.example.com/brochures/diamond-ring.pdf"
+ *       500:
+ *         description: Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server Error"
+ */
+
+router.get('/brochures',productController.getAllProductBrochures);
+
+/**
+ * @swagger
  * /products:
  *   post:
  *     summary: Create a new product (admin only)

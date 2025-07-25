@@ -84,6 +84,7 @@ exports.getProductsByCategory = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
 exports.shareProductLink = async (req, res) => {
   try {
     const { id } = req.params;
@@ -98,5 +99,26 @@ exports.shareProductLink = async (req, res) => {
   } catch (error) {
     console.error("Error generating share link:", error);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc Get All Brouchers
+exports.getAllProductBrochures = async (req, res) => {
+  try {
+    const products = await Product.find(
+      { brochure: { $ne: null } }, // fetch only if brochure exists
+      { name: 1, productId: 1, brochure: 1 } // projection
+    );
+
+    const response = products.map(p => ({
+      name: p.name,
+      SKU: p.productId,
+      brochure: p.brochure,
+    }));
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error fetching brochures:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
