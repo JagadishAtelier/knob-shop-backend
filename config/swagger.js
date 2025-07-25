@@ -13,6 +13,9 @@ const swaggerOptions = {
       {
         url: "http://localhost:5000/api", // change as needed
       },
+      {
+        url: "https://knob-shop-backend.onrender.com/api-docs/api", // change as needed
+      },
     ],
     components: {
       securitySchemes: {
