@@ -1,23 +1,37 @@
 const Brochure = require("../models/Brochuers");
 
-// CREATE brochure
 const createBrochureController = async (req, res) => {
-    try {
-      const { title, description, image } = req.body;
-  
-      const brochure = new Brochure({
-        title,
-        description,
-        image, // this should be a Cloudinary URL string
-      });
-  
-      const saved = await brochure.save();
-      res.status(201).json({ success: true, brochure: saved });
-    } catch (error) {
-      console.error("Create Brochure Error:", error);
-      res.status(500).json({ success: false, message: "Failed to create brochure" });
-    }
-  };
+  try {
+    const {
+      title,
+      subtitle,
+      description,
+      pdfLink,
+      images = [],
+      category,
+      tags = [],
+      isActive = true,
+    } = req.body;
+
+    const brochure = new Brochure({
+      title,
+      subtitle,
+      description,
+      pdfLink,      // ✅ store PDF URL
+      images,       // ✅ optional - for thumbnails or cover
+      category,
+      tags,
+      isActive,
+    });
+
+    const saved = await brochure.save();
+    res.status(201).json({ success: true, brochure: saved });
+  } catch (error) {
+    console.error("Create Brochure Error:", error);
+    res.status(500).json({ success: false, message: "Failed to create brochure" });
+  }
+};
+
   
 
 // GET all brochures
