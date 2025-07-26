@@ -179,8 +179,9 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
             category: product?.category?.toString() || "", // optionally populate if needed
             brand: product?.brand || "",
             soldQty: stats.soldQty,
-            revenue: stats.revenue,
-            changeRate: Math.floor(Math.random() * 30)
+            revenue: Number(stats.revenue.toFixed(2)),
+            changeRate: Number((Math.random() * 30).toFixed(2))  // Optional: keep it 2 decimal places if needed
+            
           };
         })        
     );
