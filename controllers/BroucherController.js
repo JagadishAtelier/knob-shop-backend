@@ -1,16 +1,24 @@
 const Brochure = require("../models/Brochuers");
 
 // CREATE brochure
-const createBrochure = async (req, res) => {
-  try {
-    const brochure = new Brochure(req.body);
-    const saved = await brochure.save();
-    res.status(201).json({ success: true, brochure: saved });
-  } catch (error) {
-    console.error("Create Brochure Error:", error);
-    res.status(500).json({ success: false, message: "Failed to create brochure" });
-  }
-};
+const createBrochureController = async (req, res) => {
+    try {
+      const { title, description, image } = req.body;
+  
+      const brochure = new Brochure({
+        title,
+        description,
+        image, // this should be a Cloudinary URL string
+      });
+  
+      const saved = await brochure.save();
+      res.status(201).json({ success: true, brochure: saved });
+    } catch (error) {
+      console.error("Create Brochure Error:", error);
+      res.status(500).json({ success: false, message: "Failed to create brochure" });
+    }
+  };
+  
 
 // GET all brochures
 const getAllBrochures = async (req, res) => {
@@ -60,7 +68,7 @@ const deleteBrochure = async (req, res) => {
 };
 
 module.exports = {
-  createBrochure,
+    createBrochureController,
   getAllBrochures,
   getBrochureById,
   updateBrochure,

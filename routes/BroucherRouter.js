@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {
-  createBrochure,
+    createBrochureController,
   getAllBrochures,
   getBrochureById,
   updateBrochure,
@@ -9,7 +9,7 @@ const {
 } = require("../controllers/BroucherController");
 
 // Create
-router.post("/", createBrochure);
+router.post("/", createBrochureController);
 
 // Read
 router.get("/", getAllBrochures);
