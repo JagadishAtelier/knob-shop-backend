@@ -87,21 +87,14 @@ const productSchema = new mongoose.Schema(
       width: Number,
       length: Number,
     },
+    brochure: String,
+  //for tracking who created the product
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId, // will added by controller using token
+      ref: 'User',
+      required: true,
+    }
 
-    // Discount details
-    discount: {
-      type: {
-        type: String,
-        enum: ["percentage", "flat"],
-        default: "percentage",
-      },
-      value: { type: Number, default: 0 },
-      startDate: { type: Date },
-      endDate: { type: Date },
-      isActive: { type: Boolean, default: false },
-    },
-  },
-  { timestamps: true }
-);
+  }, { timestamps: true }); 
 
-module.exports = mongoose.model("Product", productSchema);
+  module.exports = mongoose.model('Product', productSchema);
