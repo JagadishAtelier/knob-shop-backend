@@ -42,6 +42,12 @@
         value: String,
         images: [String],
         price: Number,
+        sizes: [
+        {
+          label: { type: String, required: true }, // e.g., "Small", "4x4"
+          price: { type: Number, required: true, default: 0 }, // Price adjustment for this size (relative to variant price)
+          stock: { type: Number, required: true, default: 0 }, // Stock for this specific size
+        }]
       }
     ],
     discount: {
@@ -61,6 +67,10 @@
       width: Number,
       length: Number,
     },
+    installation: {
+    videoUrl: String, // To store the YouTube video URL
+    content: String,  // To store the installation text content
+  },
     brochure: String,
   //for tracking who created the product
     createdBy: {
