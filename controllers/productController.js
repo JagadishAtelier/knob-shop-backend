@@ -122,3 +122,27 @@ exports.getAllProductBrochures = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+// @desc Get products by brand name (case-insensitive, handles spaces, etc.)
+exports.getProductsByBrand = async (req, res) => {
+  try {
+    const { brandName } = req.params;
+
+    // Create a case-insensitive regex to match the brand name
+    const regex = new RegExp(brandName.trim(), 'i'); // no ^ and $
+
+
+    const products = await Product.find({ brand: { $regex: regex } })
+      .populate('category')
+      .populate('createdBy', 'name email');
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: 'No products found for this brand.' });
+    }
+
+    res.status(200).json({ success: true, count: products.length, data: products });
+  } catch (error) {
+    console.error('Error fetching products by brand:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};

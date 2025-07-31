@@ -52,7 +52,7 @@ const { adminOnly } = require('../middlewares/adminMiddleware');
  */
 
 router.get('/brochures',productController.getAllProductBrochures);
-
+router.get('/by-brand/:brandName', productController.getProductsByBrand);
 /**
  * @swagger
  * /products:
@@ -108,26 +108,6 @@ router.post('/', protect, adminOnly, productController.createProduct);
  */
 router.get('/', productController.getAllProducts);
 
-/**
- * @swagger
- * /products/{id}:
- *   get:
- *     summary: Get a single product by ID
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: Product ID
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Product details
- *       404:
- *         description: Product not found
- */
-router.get('/:id', productController.getProductById);
 
 /**
  * @swagger
@@ -218,6 +198,25 @@ router.delete('/:id', protect, adminOnly, productController.deleteProduct);
  *         description: Server error
  */
 router.get('/category/:categoryId', productController.getProductsByCategory);
-router.get('/products/:id/share', productController.shareProductLink);
 
+/**
+ * @swagger
+ * /products/{id}:
+ *   get:
+ *     summary: Get a single product by ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Product ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Product details
+ *       404:
+ *         description: Product not found
+ */
+router.get('/:id', productController.getProductById);
 module.exports = router;
