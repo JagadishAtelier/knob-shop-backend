@@ -79,6 +79,17 @@ const productSchema = new mongoose.Schema(
       videoUrl: String,
       content: String,
     },
+     discount: {
+      type: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        default: null,
+      },
+      value: {type: Number, default: 0},
+      startDate: {type: Date, default: null},
+      endDate: {type: Date, default: null},
+      isActive: { type: Boolean, default: false }
+    },
 
     // Product dimensions
     dimensions: {
