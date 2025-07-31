@@ -218,6 +218,6 @@ router.delete('/:id', protect, adminOnly, productController.deleteProduct);
  *         description: Server error
  */
 router.get('/category/:categoryId', productController.getProductsByCategory);
-router.get('/products/:id/share', productController.shareProductLink);
+router.get('/:brandName', productController.getProductsByBrand);
 
 module.exports = router;
