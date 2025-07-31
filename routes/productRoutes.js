@@ -52,7 +52,7 @@ const { adminOnly } = require('../middlewares/adminMiddleware');
  */
 
 router.get('/brochures',productController.getAllProductBrochures);
-router.get('/by-brand/:brandName', productController.getProductsByBrand);
+router.get('/:brandName', productController.getProductsByBrand);
 /**
  * @swagger
  * /products:
