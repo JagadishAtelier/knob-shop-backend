@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const generateToken = require("../utils/generateToken");
 const Cart = require("../models/Cart");
-const admin = require("../utils/firebaseAdmin");
+// const admin = require("../utils/firebaseAdmin");
 exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
   const userExists = await User.findOne({ email });
@@ -159,74 +159,75 @@ exports.getAllUsersWithCart = async (req, res) => {
 };
   
 
-exports.sendLoginOTP = async (req, res) => {
-  const { identifier } = req.body; // could be email or phone
-  if (!identifier) return res.status(400).json({ message: "Email or phone is required" });
+// exports.sendLoginOTP = async (req, res) => {
+//   const { identifier } = req.body; // could be email or phone
+//   if (!identifier) return res.status(400).json({ message: "Email or phone is required" });
 
-  const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-  const user = isEmailInput
-    ? await User.findOne({ email: identifier })
-    : await User.findOne({ phone: identifier });
+//   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+//   const user = isEmailInput
+//     ? await User.findOne({ email: identifier })
+//     : await User.findOne({ phone: identifier });
 
-  if (!user) return res.status(404).json({ message: "User not found" });
+//   if (!user) return res.status(404).json({ message: "User not found" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpiresAt = Date.now() + 10 * 60 * 1000;
+//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//   const otpExpiresAt = Date.now() + 10 * 60 * 1000;
 
-  user.otp = otp;
-  user.otpExpiresAt = otpExpiresAt;
-  await user.save();
+//   user.otp = otp;
+//   user.otpExpiresAt = otpExpiresAt;
+//   await user.save();
 
-  if (isEmailInput) {
-    // Send via email using nodemailer
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: parseInt(process.env.MAIL_PORT),
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-      },
-    });
+//   if (isEmailInput) {
+//     // Send via email using nodemailer
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.MAIL_HOST,
+//       port: parseInt(process.env.MAIL_PORT),
+//       secure: false,
+//       auth: {
+//         user: process.env.MAIL_USER,
+//         pass: process.env.MAIL_PASS,
+//       },
+//     });
 
-    const mailOptions = {
-      from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
-      to: user.email,
-      subject: "Your Login OTP",
-      html: `<h2>Your OTP: ${otp}</h2><p>Expires in 10 minutes</p>`,
-    };
+//     const mailOptions = {
+//       from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
+//       to: user.email,
+//       subject: "Your Login OTP",
+//       html: `<h2>Your OTP: ${otp}</h2><p>Expires in 10 minutes</p>`,
+//     };
 
-    await transporter.sendMail(mailOptions);
-  } else {
-    console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
-  }
+//     await transporter.sendMail(mailOptions);
+//   } else {
+//     console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
 
-  res.status(200).json({ message: `OTP sent to your ${isEmailInput ? 'email' : 'phone number'}` });
-};
+//   }
 
-exports.verifyLoginOTP = async (req, res) => {
-  const { identifier, otp } = req.body;
-  const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+//   res.status(200).json({ message: `OTP sent to your ${isEmailInput ? 'email' : 'phone number'}` });
+// };
 
-  const user = isEmailInput
-    ? await User.findOne({ email: identifier })
-    : await User.findOne({ phone: identifier });
+// exports.verifyLoginOTP = async (req, res) => {
+//   const { identifier, otp } = req.body;
+//   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
-  if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
-    return res.status(400).json({ message: "Invalid or expired OTP" });
-  }
+//   const user = isEmailInput
+//     ? await User.findOne({ email: identifier })
+//     : await User.findOne({ phone: identifier });
 
-  user.otp = null;
-  user.otpExpiresAt = null;
-  await user.save();
+//   if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
+//     return res.status(400).json({ message: "Invalid or expired OTP" });
+//   }
 
-  res.status(200).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    token: generateToken(user._id, user.role),
-  });
-};
+//   user.otp = null;
+//   user.otpExpiresAt = null;
+//   await user.save();
+
+//   res.status(200).json({
+//     _id: user._id,
+//     name: user.name,
+//     email: user.email,
+//     phone: user.phone,
+//     role: user.role,
+//     token: generateToken(user._id, user.role),
+//   });
+// };
 
