@@ -5,7 +5,9 @@ const {
   forgotPassword,
   resetPassword,
   getUserByIdWithCart,
-  getAllUsersWithCart
+  getAllUsersWithCart,
+  verifyLoginOTP,
+  sendLoginOTP
 } = require("../controllers/authController");
 
 const router = express.Router();
@@ -181,5 +183,7 @@ router.get("/users", getAllUsersWithCart);
  *         description: Failed to fetch user
  */
 router.get("/user/:id", getUserByIdWithCart);
+router.get("/login/otp-request", sendLoginOTP);
+router.get("/login/otp-verify", verifyLoginOTP);
 
 module.exports = router;
