@@ -164,9 +164,9 @@ exports.Check = async (req, res) => {
     console.error("User check failed:", err);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
-exports.UserLogin =  async (req, res) => {
+exports.UserLogin = async (req, res) => {
   const { email, phone, password } = req.body;
 
   if (!password || (!email && !phone)) {
@@ -186,29 +186,49 @@ exports.UserLogin =  async (req, res) => {
     console.error("Login failed:", err);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
-exports.UserSignup =  async (req, res) => {
-  const { email, phone, password, name = "User" } = req.body;
-
-  if ((!email && !phone) || !password) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
+exports.UserSignup = async (req, res) => {
   try {
-    const exists = await User.findOne(email ? { email } : { phone });
-    if (exists) return res.status(400).json({ error: "User already exists" });
+    const { email, phone, password, name = "User" } = req.body;
 
+    // Require at least one of email or phone and a password
+    if ((!email && !phone) || !password) {
+      return res
+        .status(400)
+        .json({ error: "Missing required fields (email/phone and password)" });
+    }
+
+    let query = {};
+    if (email) {
+      query = { email };
+    } else {
+      query = { phone };
+    }
+
+    // Check if user already exists
+    const exists = await User.findOne(query);
+    if (exists) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    // Create new user
     const user = new User({ email, phone, password, name });
     await user.save();
 
-    const token = generateToken(user);
-    res.status(201).json({ token, email: user.email, role: user.role });
+    const token = generateToken(user); // assuming this generates a JWT
+    res.status(201).json({
+      token,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      role: user.role,
+    });
   } catch (err) {
     console.error("Signup failed:", err);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 exports.sendLoginOTP = async (req, res) => {
   const { identifier } = req.body; // could be email or phone
@@ -220,14 +240,14 @@ exports.sendLoginOTP = async (req, res) => {
     ? await User.findOne({ email: identifier })
     : await User.findOne({ phone: identifier });
 
-//   if (!user) return res.status(404).json({ message: "User not found" });
+  //   if (!user) return res.status(404).json({ message: "User not found" });
 
-//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-//   const otpExpiresAt = Date.now() + 10 * 60 * 1000;
+  //   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  //   const otpExpiresAt = Date.now() + 10 * 60 * 1000;
 
-//   user.otp = otp;
-//   user.otpExpiresAt = otpExpiresAt;
-//   await user.save();
+  //   user.otp = otp;
+  //   user.otpExpiresAt = otpExpiresAt;
+  //   await user.save();
 
   if (isEmailInput) {
     // Send via email using nodemailer
@@ -242,11 +262,11 @@ exports.sendLoginOTP = async (req, res) => {
     });
 
     const mailOptions = {
-    from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
-    to: user.email,
-    subject: "Your OTP for Knobsshop Login",
-    text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-    html: `
+      from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
+      to: user.email,
+      subject: "Your OTP for Knobsshop Login",
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+      html: `
     <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9fafb; color: #333;">
      <div style="display: flex; justify-content: center; align-items: center;"><img src="https://knobsshop.store/assets/logo-CnQfNeT-.png" alt="Knobsshop Logo" style="height: 40px;" /></div>
     <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
@@ -260,38 +280,36 @@ exports.sendLoginOTP = async (req, res) => {
       <p style="font-size: 12px; color: #6b7280;">&copy; ${new Date().getFullYear()} KnobsShop. All rights reserved.</p>
     </div>
   `,
-  };
+    };
 
-//     await transporter.sendMail(mailOptions);
-//   } else {
-//     console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
+    //     await transporter.sendMail(mailOptions);
+    //   } else {
+    //     console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
 
-//   }
+    //   }
 
-//   res.status(200).json({ message: `OTP sent to your ${isEmailInput ? 'email' : 'phone number'}` });
-// };
-  res
-    .status(200)
-    .json({
+    //   res.status(200).json({ message: `OTP sent to your ${isEmailInput ? 'email' : 'phone number'}` });
+    // };
+    res.status(200).json({
       message: `OTP sent to your ${isEmailInput ? "email" : "phone number"}`,
     });
-};
+  }
 
-// exports.verifyLoginOTP = async (req, res) => {
-//   const { identifier, otp } = req.body;
-//   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+  // exports.verifyLoginOTP = async (req, res) => {
+  //   const { identifier, otp } = req.body;
+  //   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
-//   const user = isEmailInput
-//     ? await User.findOne({ email: identifier })
-//     : await User.findOne({ phone: identifier });
+  //   const user = isEmailInput
+  //     ? await User.findOne({ email: identifier })
+  //     : await User.findOne({ phone: identifier });
 
-//   if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
-//     return res.status(400).json({ message: "Invalid or expired OTP" });
-//   }
+  //   if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
+  //     return res.status(400).json({ message: "Invalid or expired OTP" });
+  //   }
 
-//   user.otp = null;
-//   user.otpExpiresAt = null;
-//   await user.save();
+  //   user.otp = null;
+  //   user.otpExpiresAt = null;
+  //   await user.save();
 
   res.status(200).json({
     _id: user._id,
