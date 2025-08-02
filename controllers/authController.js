@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const generateToken = require("../utils/generateToken");
 const Cart = require("../models/Cart");
-const admin = require("../utils/firebaseAdmin");
+// const admin = require("../utils/firebaseAdmin");
 exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
   const userExists = await User.findOne({ email });
@@ -164,14 +164,14 @@ exports.sendLoginOTP = async (req, res) => {
     ? await User.findOne({ email: identifier })
     : await User.findOne({ phone: identifier });
 
-  if (!user) return res.status(404).json({ message: "User not found" });
+//   if (!user) return res.status(404).json({ message: "User not found" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpiresAt = Date.now() + 10 * 60 * 1000;
+//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//   const otpExpiresAt = Date.now() + 10 * 60 * 1000;
 
-  user.otp = otp;
-  user.otpExpiresAt = otpExpiresAt;
-  await user.save();
+//   user.otp = otp;
+//   user.otpExpiresAt = otpExpiresAt;
+//   await user.save();
 
   if (isEmailInput) {
     // Send via email using nodemailer
@@ -206,11 +206,14 @@ exports.sendLoginOTP = async (req, res) => {
   `,
   };
 
-    await transporter.sendMail(mailOptions);
-  } else {
-    console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
-  }
+//     await transporter.sendMail(mailOptions);
+//   } else {
+//     console.log(`Send OTP ${otp} to phone number: ${user.phone}`);
 
+//   }
+
+//   res.status(200).json({ message: `OTP sent to your ${isEmailInput ? 'email' : 'phone number'}` });
+// };
   res
     .status(200)
     .json({
@@ -218,21 +221,21 @@ exports.sendLoginOTP = async (req, res) => {
     });
 };
 
-exports.verifyLoginOTP = async (req, res) => {
-  const { identifier, otp } = req.body;
-  const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+// exports.verifyLoginOTP = async (req, res) => {
+//   const { identifier, otp } = req.body;
+//   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
-  const user = isEmailInput
-    ? await User.findOne({ email: identifier })
-    : await User.findOne({ phone: identifier });
+//   const user = isEmailInput
+//     ? await User.findOne({ email: identifier })
+//     : await User.findOne({ phone: identifier });
 
-  if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
-    return res.status(400).json({ message: "Invalid or expired OTP" });
-  }
+//   if (!user || user.otp !== otp || Date.now() > user.otpExpiresAt) {
+//     return res.status(400).json({ message: "Invalid or expired OTP" });
+//   }
 
-  user.otp = null;
-  user.otpExpiresAt = null;
-  await user.save();
+//   user.otp = null;
+//   user.otpExpiresAt = null;
+//   await user.save();
 
   res.status(200).json({
     _id: user._id,

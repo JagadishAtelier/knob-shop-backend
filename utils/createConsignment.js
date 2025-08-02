@@ -10,19 +10,24 @@ const createDTDCConsignment = async (orderData) => {
           load_type: "NON-DOCUMENT",
           description: "Order items",
           dimension_unit: "cm",
-          length: "30", width: "30", height: "30",
+          length: "30",
+          width: "30",
+          height: "30",
           weight_unit: "kg",
           weight: "1.0",
-          declared_value: orderData.totalAmount,
+          declared_value: orderData.totalAmount || 0,
           num_pieces: "1",
+
           origin_details: {
             name: "Your Company",
             phone: "9999999999",
+            alternate_phone: "8888888888", // ✅ Add this line
             address_line_1: "123 Main Street",
             pincode: "110001",
             city: "New Delhi",
             state: "Delhi"
           },
+
           destination_details: {
             name: orderData.shippingAddress.name,
             phone: orderData.shippingAddress.phone,
@@ -31,6 +36,7 @@ const createDTDCConsignment = async (orderData) => {
             city: orderData.shippingAddress.city,
             state: orderData.shippingAddress.state
           },
+
           return_details: {
             name: "Return Dept",
             phone: "9999999999",
@@ -40,7 +46,8 @@ const createDTDCConsignment = async (orderData) => {
             state_name: "Delhi",
             email: "support@yourcompany.com"
           },
-          customer_reference_number: orderData._id, 
+
+          customer_reference_number: orderData._id || orderData.invoiceNo || "ORDER123",
           cod_collection_mode: "",
           cod_amount: "",
           commodity_id: "99",
@@ -53,7 +60,7 @@ const createDTDCConsignment = async (orderData) => {
     };
 
     const response = await axios.post(
-      "https://dtdcapi.shipsy.io/api/customer/integration/consignment/softdata",
+      "https://alphademodashboardapi.shipsy.io/api/customer/integration/consignment/softdata",
       payload,
       {
         headers: {
