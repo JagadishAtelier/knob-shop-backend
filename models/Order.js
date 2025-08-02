@@ -33,8 +33,6 @@ const orderSchema = new mongoose.Schema({
     state: { type: String, required: true },
   },
   dtdcReferenceNumber: { type: String },
-  shippingLabelBase64: { type: String },
-  labelGenerated: { type: Boolean, default: false },
   status: {
     type: String,
     enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
