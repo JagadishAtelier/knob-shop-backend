@@ -220,4 +220,7 @@ router.delete('/:id', protect, adminOnly, productController.deleteProduct);
 router.get('/category/:categoryId', productController.getProductsByCategory);
 router.get('/brand/:brandName', productController.getProductsByBrand);
 
+router.get("/search/:query", productController.searchProductsByParam);
+
+
 module.exports = router;

@@ -19,6 +19,7 @@ const adRoutes = require('./routes/adRoutes');
 const wishlistRoutes= require('./routes/wishlistRoutes');
 const analyticRoutes = require('./routes/AnalyticRoutes');
 const brochureRoutes = require("./routes/BroucherRouter");
+
 dotenv.config();
 connectDB();
 
@@ -31,7 +32,9 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174',
     'https://knobsshop.store',
-    'https://dashboard.knobsshop.store'
+    'https://dashboard.knobsshop.store',
+    'https://knob-shop-khaki.vercel.app',
+    'https://knob-shop-dashboard.vercel.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }));
