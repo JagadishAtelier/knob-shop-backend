@@ -186,6 +186,6 @@ router.get("/users", getAllUsersWithCart);
 router.get("/user/:id", getUserByIdWithCart);
 
 router.get("/check", Check);
-router.get("/user/login", UserLogin);
-router.get("/user/signup", UserSignup);
+router.post("/user/login", UserLogin);
+router.post("/user/signup", UserSignup);
 module.exports = router;
