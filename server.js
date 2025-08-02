@@ -27,17 +27,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://knobsshop.store',
-    'https://dashboard.knobsshop.store',
-    'https://knob-shop-khaki.vercel.app',
-    'https://knob-shop-dashboard.vercel.app'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));
+app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
