@@ -154,6 +154,62 @@ exports.getAllUsersWithCart = async (req, res) => {
   }
 };
 
+exports.Check = async (req, res) => {
+  const { email, phone } = req.query;
+
+  try {
+    const user = await User.findOne(email ? { email } : { phone });
+    res.json({ exists: !!user });
+  } catch (err) {
+    console.error("User check failed:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+exports.UserLogin =  async (req, res) => {
+  const { email, phone, password } = req.body;
+
+  if (!password || (!email && !phone)) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
+
+  try {
+    const user = await User.findOne(email ? { email } : { phone });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
+
+    const token = generateToken(user);
+    res.json({ token, email: user.email, role: user.role });
+  } catch (err) {
+    console.error("Login failed:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+exports.UserSignup =  async (req, res) => {
+  const { email, phone, password, name = "User" } = req.body;
+
+  if ((!email && !phone) || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const exists = await User.findOne(email ? { email } : { phone });
+    if (exists) return res.status(400).json({ error: "User already exists" });
+
+    const user = new User({ email, phone, password, name });
+    await user.save();
+
+    const token = generateToken(user);
+    res.status(201).json({ token, email: user.email, role: user.role });
+  } catch (err) {
+    console.error("Signup failed:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 exports.sendLoginOTP = async (req, res) => {
   const { identifier } = req.body; // could be email or phone
   if (!identifier)
