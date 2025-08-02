@@ -19,15 +19,6 @@ const createOrderWithShipping = async (req, res) => {
 
     orderData.totalAmount = orderData.items.reduce((sum,item) => sum + item.total,0)
 
-
-    const dtdcResponse = await createDTDCConsignment(orderData);
-    // const referenceNumber = dtdcResponse.reference_number;
-    // const base64Label = await generateDTDCLabel(referenceNumber);
-
-    // orderData.dtdcReferenceNumber = referenceNumber;
-    // orderData.shippingLabelBase64 = base64Label;
-    // orderData.labelGenerated = true;
-
     const newOrder = new Order(orderData);
     await newOrder.save();
 
@@ -58,48 +49,6 @@ const createOrderWithShipping = async (req, res) => {
     res.status(500).json({ message:"Order creation failed", error: error.message })
   }
 };
-const createOnlyConsignment = async (req, res) => {
-  try {
-    const orderData = req.body;
-
-    if (!Array.isArray(orderData.items) || orderData.items.length === 0) {
-      return res.status(400).json({ message: "Consignment must contain at least one item" });
-    }
-
-    orderData.items.forEach(item => {
-      item.total = item.quantity * item.price;
-    });
-
-    orderData.totalAmount = orderData.items.reduce((sum, item) => sum + item.total, 0);
-
-    const dtdcResponse = await createDTDCConsignment(orderData);
-
-    if (!dtdcResponse.success || !dtdcResponse.reference_number) {
-      return res.status(400).json({
-        message: "DTDC consignment creation failed",
-        error: dtdcResponse.message || "Unknown error from DTDC"
-      });
-    }
-
-    // 🔥 Generate label
-    const referenceNumber = dtdcResponse.reference_number;
-    const base64Label = await generateDTDCLabel(referenceNumber);
-
-    res.status(200).json({
-      message: "DTDC consignment created and label generated successfully",
-      consignment: dtdcResponse,
-      shippingLabelBase64: base64Label
-    });
-  } catch (error) {
-    console.error("Consignment creation error:", error);
-    res.status(500).json({
-      message: "Failed to create DTDC consignment or generate label",
-      error: error.message
-    });
-  }
-};
-
-
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
@@ -154,4 +103,4 @@ const deleteOrderById = async (req, res) => {
 
 
 
-module.exports = { createOrderWithShipping,getAllOrders,getOrderById,deleteOrderById,createOnlyConsignment };
+module.exports = { createOrderWithShipping,getAllOrders,getOrderById,deleteOrderById };
