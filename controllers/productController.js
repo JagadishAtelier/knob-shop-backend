@@ -1,5 +1,5 @@
 const Product = require('../models/Product');
-
+const Category = require("../models/Category");
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
@@ -144,5 +144,39 @@ exports.getProductsByBrand = async (req, res) => {
   } catch (error) {
     console.error('Error fetching products by brand:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+
+exports.searchProductsByParam = async (req, res) => {
+  const { query } = req.params; // or req.query if using ?query=...
+
+  if (!query || query.trim() === "") {
+    return res.status(400).json({ success: false, message: "Search query is required" });
+  }
+
+  try {
+    // Find matching categories
+    const categories = await Category.find({
+      category_name: { $regex: query, $options: "i" },
+    }).select("_id");
+
+    const categoryIds = categories.map((cat) => cat._id);
+
+    // Find products by name, category, or brand
+    const products = await Product.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { brand: { $regex: query, $options: "i" } },
+        { category: { $in: categoryIds } },
+      ],
+    })
+      .populate("category")
+      .populate("createdBy", "name email");
+
+    res.status(200).json({ success: true, results: products });
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
