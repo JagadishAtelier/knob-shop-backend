@@ -22,28 +22,44 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  console.log("Request body:", req.body);
-  const { email, password } = req.body || {};
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-  const user = await User.findOne({ email });
-  console.log("Entered password:", password);
-  console.log("Hashed password in DB:", user?.password);
-  const isMatch = await user.matchPassword(password);
-  console.log("Do they match?", isMatch);
-  if (user && (await user.matchPassword(password))) {
-    res.json({
+  try {
+    console.log("Request body:", req.body);
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    console.log("Entered password:", password);
+    console.log("Hashed password in DB:", user.password);
+
+    const isMatch = await user.matchPassword(password);
+    console.log("Do they match?", isMatch);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    return res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       token: generateToken(user._id, user.role),
     });
-  } else {
-    res.status(401).json({ message: "Invalid email or password" });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
+
 
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -166,69 +182,69 @@ exports.Check = async (req, res) => {
   }
 };
 
-exports.UserLogin = async (req, res) => {
-  const { email, phone, password } = req.body;
+// exports.UserLogin = async (req, res) => {
+//   const { email, phone, password } = req.body;
 
-  if (!password || (!email && !phone)) {
-    return res.status(400).json({ error: "Missing credentials" });
-  }
+//   if (!password || (!email && !phone)) {
+//     return res.status(400).json({ error: "Missing credentials" });
+//   }
 
-  try {
-    const user = await User.findOne(email ? { email } : { phone });
-    if (!user) return res.status(404).json({ error: "User not found" });
+//   try {
+//     const user = await User.findOne(email ? { email } : { phone });
+//     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
+//     const isMatch = await user.matchPassword(password);
+//     if (!isMatch) return res.status(401).json({ error: "Invalid password" });
 
-    const token = generateToken(user);
-    res.json({ token, email: user.email, role: user.role });
-  } catch (err) {
-    console.error("Login failed:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+//     const token = generateToken(user);
+//     res.json({ token, email: user.email, role: user.role });
+//   } catch (err) {
+//     console.error("Login failed:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
 
-exports.UserSignup = async (req, res) => {
-  try {
-    const { email, phone, password, name = "User" } = req.body;
+// exports.UserSignup = async (req, res) => {
+//   try {
+//     const { email, phone, password, name = "User" } = req.body;
 
-    // Require at least one of email or phone and a password
-    if ((!email && !phone) || !password) {
-      return res
-        .status(400)
-        .json({ error: "Missing required fields (email/phone and password)" });
-    }
+//     // Require at least one of email or phone and a password
+//     if ((!email && !phone) || !password) {
+//       return res
+//         .status(400)
+//         .json({ error: "Missing required fields (email/phone and password)" });
+//     }
 
-    let query = {};
-    if (email) {
-      query = { email };
-    } else {
-      query = { phone };
-    }
+//     let query = {};
+//     if (email) {
+//       query = { email };
+//     } else {
+//       query = { phone };
+//     }
 
-    // Check if user already exists
-    const exists = await User.findOne(query);
-    if (exists) {
-      return res.status(400).json({ error: "User already exists" });
-    }
+//     // Check if user already exists
+//     const exists = await User.findOne(query);
+//     if (exists) {
+//       return res.status(400).json({ error: "User already exists" });
+//     }
 
-    // Create new user
-    const user = new User({ email, phone, password, name });
-    await user.save();
+//     // Create new user
+//     const user = new User({ email, phone, password, name });
+//     await user.save();
 
-    const token = generateToken(user); // assuming this generates a JWT
-    res.status(201).json({
-      token,
-      email: user.email,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-    });
-  } catch (err) {
-    console.error("Signup failed:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+//     const token = generateToken(user); // assuming this generates a JWT
+//     res.status(201).json({
+//       token,
+//       email: user.email,
+//       phone: user.phone,
+//       name: user.name,
+//       role: user.role,
+//     });
+//   } catch (err) {
+//     console.error("Signup failed:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
 
 exports.sendLoginOTP = async (req, res) => {
   const { identifier } = req.body; // could be email or phone
