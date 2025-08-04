@@ -19,7 +19,7 @@ const adRoutes = require('./routes/adRoutes');
 const wishlistRoutes= require('./routes/wishlistRoutes');
 const analyticRoutes = require('./routes/AnalyticRoutes');
 const brochureRoutes = require("./routes/BroucherRouter");
-
+const consultationRoutes = require('./routes/consultationRoutes');
 dotenv.config();
 connectDB();
 
@@ -60,6 +60,7 @@ app.use('/api/policies', policyRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/analytic', analyticRoutes);
 app.use("/api/brochures", brochureRoutes);
+app.use('/api', consultationRoutes);
 app.use("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
