@@ -6,6 +6,9 @@ const {
   resetPassword,
   getUserByIdWithCart,
   getAllUsersWithCart,
+  Check,
+  UserLogin,
+  UserSignup,
 } = require("../controllers/authController");
 
 const router = express.Router();
@@ -182,4 +185,7 @@ router.get("/users", getAllUsersWithCart);
  */
 router.get("/user/:id", getUserByIdWithCart);
 
+router.get("/check", Check);
+// router.post("/user/login", UserLogin);
+// router.post("/user/signup", UserSignup);
 module.exports = router;
