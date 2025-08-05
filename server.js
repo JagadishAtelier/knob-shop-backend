@@ -12,6 +12,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const adminReviewRoutes = require('./routes/adminReviewRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const authRoutes = require("./routes/authRoutes");
+const frontauth = require("./routes/Frontauth");
 const orderRoutes = require('./routes/orderRoutes');
 const policyRoutes = require('./routes/policyRoutes');
 const cartRoutes = require('./routes/cartRoutes');
