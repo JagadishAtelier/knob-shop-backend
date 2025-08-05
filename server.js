@@ -19,6 +19,7 @@ const adRoutes = require('./routes/adRoutes');
 const wishlistRoutes= require('./routes/wishlistRoutes');
 const analyticRoutes = require('./routes/AnalyticRoutes');
 const brochureRoutes = require("./routes/BroucherRouter");
+const frontauth = require("./routes/Frontauth");
 
 dotenv.config();
 connectDB();
@@ -45,6 +46,7 @@ app.get("/api/status", (req, res) => {
   });
 });
 app.use("/api/auth",authRoutes);
+app.use("/api/user/auth", frontauth);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reviews', reviewRoutes);

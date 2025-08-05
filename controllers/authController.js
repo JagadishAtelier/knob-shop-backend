@@ -182,69 +182,69 @@ exports.Check = async (req, res) => {
   }
 };
 
-// exports.UserLogin = async (req, res) => {
-//   const { email, phone, password } = req.body;
+exports.UserLogin = async (req, res) => {
+  const { email, phone, password } = req.body;
 
-//   if (!password || (!email && !phone)) {
-//     return res.status(400).json({ error: "Missing credentials" });
-//   }
+  if (!password || (!email && !phone)) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
 
-//   try {
-//     const user = await User.findOne(email ? { email } : { phone });
-//     if (!user) return res.status(404).json({ error: "User not found" });
+  try {
+    const user = await User.findOne(email ? { email } : { phone });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-//     const isMatch = await user.matchPassword(password);
-//     if (!isMatch) return res.status(401).json({ error: "Invalid password" });
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
 
-//     const token = generateToken(user);
-//     res.json({ token, email: user.email, role: user.role });
-//   } catch (err) {
-//     console.error("Login failed:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// };
+    const token = generateToken(user);
+    res.json({ token, email: user.email, role: user.role });
+  } catch (err) {
+    console.error("Login failed:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
-// exports.UserSignup = async (req, res) => {
-//   try {
-//     const { email, phone, password, name = "User" } = req.body;
+exports.UserSignup = async (req, res) => {
+  try {
+    const { email, phone, password, name = "User" } = req.body;
 
-//     // Require at least one of email or phone and a password
-//     if ((!email && !phone) || !password) {
-//       return res
-//         .status(400)
-//         .json({ error: "Missing required fields (email/phone and password)" });
-//     }
+    // Require at least one of email or phone and a password
+    if ((!email && !phone) || !password) {
+      return res
+        .status(400)
+        .json({ error: "Missing required fields (email/phone and password)" });
+    }
 
-//     let query = {};
-//     if (email) {
-//       query = { email };
-//     } else {
-//       query = { phone };
-//     }
+    let query = {};
+    if (email) {
+      query = { email };
+    } else {
+      query = { phone };
+    }
 
-//     // Check if user already exists
-//     const exists = await User.findOne(query);
-//     if (exists) {
-//       return res.status(400).json({ error: "User already exists" });
-//     }
+    // Check if user already exists
+    const exists = await User.findOne(query);
+    if (exists) {
+      return res.status(400).json({ error: "User already exists" });
+    }
 
-//     // Create new user
-//     const user = new User({ email, phone, password, name });
-//     await user.save();
+    // Create new user
+    const user = new User({ email, phone, password, name });
+    await user.save();
 
-//     const token = generateToken(user); // assuming this generates a JWT
-//     res.status(201).json({
-//       token,
-//       email: user.email,
-//       phone: user.phone,
-//       name: user.name,
-//       role: user.role,
-//     });
-//   } catch (err) {
-//     console.error("Signup failed:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// };
+    const token = generateToken(user); // assuming this generates a JWT
+    res.status(201).json({
+      token,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      role: user.role,
+    });
+  } catch (err) {
+    console.error("Signup failed:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 exports.sendLoginOTP = async (req, res) => {
   const { identifier } = req.body; // could be email or phone
