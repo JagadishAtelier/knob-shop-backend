@@ -82,3 +82,4 @@ router.get('/get/:id', getWishlist);
 router.delete('/delete', removeFromWishlist);
 
 module.exports = router;
+  

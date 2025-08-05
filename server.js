@@ -14,6 +14,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const authRoutes = require("./routes/authRoutes");
 const frontauth = require("./routes/Frontauth");
 const orderRoutes = require('./routes/orderRoutes');
+const addressRoutes = require('./routes/addressRoutes');
 const policyRoutes = require('./routes/policyRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const adRoutes = require('./routes/adRoutes');
@@ -47,6 +48,7 @@ app.get("/api/status", (req, res) => {
 });
 app.use("/api/auth",authRoutes);
 app.use("/api/user/auth", frontauth);
+app.use('/api/address', addressRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reviews', reviewRoutes);
