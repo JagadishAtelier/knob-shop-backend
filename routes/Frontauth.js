@@ -88,7 +88,15 @@ router.post("/signup", async (req, res) => {
   await user.save();
 
   const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token });
+  res.json({ token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        cartCount: user.cart?.length || 0,
+        wishlistCount: user.wishlist?.length || 0,
+      }, });
 });
 
 router.get("/:id", async (req, res) => {
