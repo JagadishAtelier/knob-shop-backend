@@ -1,6 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/FrontUser");
+const nodemailer = require("nodemailer");
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
@@ -143,5 +144,79 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST,
+  port: parseInt(process.env.MAIL_PORT),
+  secure: false, // true for 465, false for 587
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+    },
+});
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Optional: Find user for name personalization
+    const user = await User.findOne({ email: normalizedEmail });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    otpStore.set(normalizedEmail, { otp, expiresAt });
+
+    const mailOptions = {
+      from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
+      to: normalizedEmail,
+      subject: "Your OTP for Knobsshop Login",
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+      html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9fafb; color: #333;">
+        <div style="display: flex; justify-content: center; align-items: center;">
+          <img src="https://knobsshop.store/assets/logo-CnQfNeT-.png" alt="Knobsshop Logo" style="height: 40px;" />
+        </div>
+        <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
+        <h2 style="color: #aa7e5a;">Knobsshop Login</h2>
+        <p>Hi ${user?.name || "User"},</p>
+        <p>We received a request to login. Use the OTP below to continue:</p>
+        <p style="font-size: 36px; text-align: center; font-weight: bold; color: #e18436; margin: 20px 0;">${otp}</p>
+        <p>This OTP will expire in <strong>10 minutes</strong>.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
+        <p style="font-size: 12px; color: #6b7280;">&copy; ${new Date().getFullYear()} KnobsShop. All rights reserved.</p>
+      </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("Send OTP error:", err);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+router.post("/verify-otp", (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Missing fields" });
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const stored = otpStore.get(normalizedEmail);
+
+  if (!stored) return res.status(400).json({ error: "No OTP found" });
+  if (Date.now() > stored.expiresAt) {
+    otpStore.delete(normalizedEmail);
+    return res.status(400).json({ error: "OTP expired" });
+  }
+
+  if (stored.otp !== otp) return res.status(400).json({ error: "Invalid OTP" });
+
+  otpStore.delete(normalizedEmail); // Clean up after success
+  res.status(200).json({ message: "OTP verified successfully" });
+});
 module.exports = router;
