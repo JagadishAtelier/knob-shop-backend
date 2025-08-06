@@ -1,9 +1,9 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/FrontUser");
-const nodemailer = require("nodemailer");
+const Otp = require("../models/otp");
 const router = express.Router();
-
+const transporter = require("../utils/mailer");
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
 // ✅ Check if user exists
@@ -144,15 +144,8 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: parseInt(process.env.MAIL_PORT),
-  secure: false, // true for 465, false for 587
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-    },
-});
+
+const otpStore = new Map();
 router.post("/send-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -167,7 +160,14 @@ router.post("/send-otp", async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    otpStore.set(normalizedEmail, { otp, expiresAt });
+    await Otp.deleteMany({ email: normalizedEmail });
+    
+    // Create a new OTP document
+    const newOtp = new Otp({
+      email: normalizedEmail,
+      otp: otp,
+    });
+    await newOtp.save();
 
     const mailOptions = {
       from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
@@ -201,22 +201,36 @@ router.post("/send-otp", async (req, res) => {
   }
 });
 
-router.post("/verify-otp", (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: "Missing fields" });
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  const stored = otpStore.get(normalizedEmail);
+    const normalizedEmail = email.trim().toLowerCase();
 
-  if (!stored) return res.status(400).json({ error: "No OTP found" });
-  if (Date.now() > stored.expiresAt) {
-    otpStore.delete(normalizedEmail);
-    return res.status(400).json({ error: "OTP expired" });
+    // Find the OTP in the database
+    const storedOtp = await Otp.findOne({
+      email: normalizedEmail,
+      otp: otp,
+    });
+
+    if (!storedOtp) {
+      // If the OTP is not found, it means it's either incorrect or expired (TTL index took care of it)
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+
+    // Since the TTL index automatically handles expiration, we just need to delete the used OTP
+    await Otp.deleteOne({ _id: storedOtp._id });
+
+    // Logic for successful verification (e.g., login the user, create a session, generate a token)
+    // ...
+
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (err) {
+    console.error("Verify OTP error:", err);
+    res.status(500).json({ error: "Failed to verify OTP" });
   }
-
-  if (stored.otp !== otp) return res.status(400).json({ error: "Invalid OTP" });
-
-  otpStore.delete(normalizedEmail); // Clean up after success
-  res.status(200).json({ message: "OTP verified successfully" });
 });
 module.exports = router;
