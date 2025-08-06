@@ -34,7 +34,7 @@ exports.getWishlist = async (req, res) => {
   }
 };
 
-// ❌ Remove product from wishlist
+// ❌ Remove product from wishlist  
 exports.removeFromWishlist = async (req, res) => {
   try {
     const { userId, productId } = req.body;
