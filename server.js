@@ -13,6 +13,7 @@ const adminReviewRoutes = require('./routes/adminReviewRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const authRoutes = require("./routes/authRoutes");
 const frontauth = require("./routes/Frontauth");
+const paymentRouter = require("./routes/payment");
 const orderRoutes = require('./routes/orderRoutes');
 const addressRoutes = require('./routes/addressRoutes');
 const policyRoutes = require('./routes/policyRoutes');
@@ -47,6 +48,7 @@ app.get("/api/status", (req, res) => {
   });
 });
 app.use("/api/auth",authRoutes);
+app.use("/api/payment",paymentRouter);
 app.use("/api/user/auth", frontauth);
 app.use('/api/address', addressRoutes);
 app.use('/api/categories', categoryRoutes);

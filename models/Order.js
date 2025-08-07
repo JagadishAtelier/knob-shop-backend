@@ -3,10 +3,10 @@ const mongoose = require("mongoose");
 const Counter = require("./Counter");
 
 const orderSchema = new mongoose.Schema({
-  orderId: { type: String, unique: true }, // e.g., 'ORD-0001'
+  orderId: { type: String, unique: true }, // Auto-generated order ID
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "FrontUser",
     required: true,
   },
   items: [
@@ -44,7 +44,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["cod", "upi", "card", "netbanking"],
+    enum: ["cod", "upi", "card", "netbanking","online"],
     default: "cod"
   },
   createdAt: { type: Date, default: Date.now }
