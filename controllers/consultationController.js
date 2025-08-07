@@ -20,7 +20,7 @@ exports.createConsultation = async (req, res) => {
     // Mail content
     const subject = '📝 New Consultation Booking Received';
     const html = `
-      <h2>New Consultation Details</h2>
+      <h2>New Book Consultation User Details From Our Knobsshop</h2>
       <p><strong>Name:</strong> ${consultation.name}</p>
       <p><strong>Email:</strong> ${consultation.email}</p>
       <p><strong>Mobile:</strong> ${consultation.mobile}</p>
@@ -35,7 +35,7 @@ exports.createConsultation = async (req, res) => {
     // Send email to admin
     await transporter.sendMail({
       from: `"Knobsshop Booking" <${process.env.EMAIL_USER}>`,
-      to: 'jagadish.atelier@gmail.com', // Replace with actual admin email
+      to: 'ecom@knobsshop.store', // Replace with actual admin email
       subject,
       html,
     });
