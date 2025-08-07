@@ -8,6 +8,7 @@ function encrypt(text, workingKey) {
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7,
   });
-  return encrypted.toString();
+  return encrypted.ciphertext.toString(CryptoJS.enc.Hex); // 🔁 Use .ciphertext + Hex
 }
+
 module.exports = encrypt;
