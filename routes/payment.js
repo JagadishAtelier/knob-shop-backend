@@ -26,6 +26,7 @@ console.log("encRequest", encRequest);
   return res.json({
     encRequest,
     accessCode,
+    merchantId
   });   
 });
 
