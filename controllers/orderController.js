@@ -215,6 +215,9 @@ const updateOrderByOrderId = async (req, res) => {
 const getOrdersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
 
     if (!userId) {
       return res
@@ -222,12 +225,20 @@ const getOrdersByUserId = async (req, res) => {
         .json({ success: false, message: "User ID is required" });
     }
 
+    const totalCount = await Order.countDocuments({ userId });
+
     const orders = await Order.find({ userId })
       .populate("userId", "name email")
       .populate("items.productId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, orders });
+    res.status(200).json({
+      success: true,
+      orders,
+      totalCount,
+    });
   } catch (error) {
     console.error("Error fetching orders by userId:", error);
     res.status(500).json({
