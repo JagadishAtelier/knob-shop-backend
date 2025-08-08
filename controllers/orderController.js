@@ -212,6 +212,31 @@ const updateOrderByOrderId = async (req, res) => {
   }
 };
 
+const getOrdersByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User ID is required" });
+    }
+
+    const orders = await Order.find({ userId })
+      .populate("userId", "name email")
+      .populate("items.productId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, orders });
+  } catch (error) {
+    console.error("Error fetching orders by userId:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+      error: error.message,
+    });
+  }
+};
 
 
 module.exports = {
@@ -219,5 +244,6 @@ module.exports = {
   updateOrderByOrderId,
   getAllOrders,
   getOrderById,
+  getOrdersByUserId,
   deleteOrderById,
 };
