@@ -36,7 +36,7 @@ const getCartByUserId = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const { userId, productId } = req.body;
+    const { userId, productId } = req.params;
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -62,6 +62,7 @@ const deleteCartItem = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   addToCart,
