@@ -47,6 +47,7 @@ const orderSchema = new mongoose.Schema({
     enum: ["cod", "upi", "card", "netbanking","online"],
     default: "cod"
   },
+  paymentReference: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 
