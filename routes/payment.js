@@ -33,19 +33,19 @@ console.log("encRequest", encRequest);
 
 router.post("/payment-response", async (req, res) => {
   try {
-    const encryptedResponse = req.body.encResp;
+    const encryptedResponse = req.body
 
     if (!encryptedResponse) {
       return res.status(400).send("No encResp received");
     }
 
-    const decrypted = decrypt(encryptedResponse, workingKey);
+    const decrypted = ccAvenue.decrypt(encryptedResponse.encResp, workingKey);
     const parsed = Object.fromEntries(new URLSearchParams(decrypted));
 
     console.log("🔔 Payment response decrypted:", parsed);
 
     const orderId = parsed.order_id;
-    const paymentStatus = parsed.order_status; // should be "Success", "Failure", etc.
+    const paymentStatus = parsed.order_status;
 
     if (!orderId) {
       console.error("No order_id found in payment response");
