@@ -79,7 +79,7 @@ router.get('/get/:id', getWishlist);
  *       200:
  *         description: Product removed from wishlist
  */
-router.delete('/delete', removeFromWishlist);
+router.delete('/delete/:userId/:productId', removeFromWishlist);
 
 module.exports = router;
   
