@@ -87,7 +87,7 @@ router.get("/get/:userId", getCartByUserId);
  *       404:
  *         description: Cart item not found
  */
-router.delete("/delete/:userId/:productId", deleteCartItem);
+router.delete("/delete", deleteCartItem);
 
 
 module.exports = router;
