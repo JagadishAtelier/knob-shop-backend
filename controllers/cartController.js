@@ -1,5 +1,5 @@
 const Cart = require("../models/Cart");
-
+const User = require("../models/User");
 const addToCart = async (req, res) => {
   try {
     const { userId, productId, quantity } = req.body;
@@ -36,19 +36,33 @@ const getCartByUserId = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const cartItemId = req.params.id;
+    const { userId, productId } = req.params;
 
-    const deletedItem = await Cart.findByIdAndDelete(cartItemId);
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete the cart item for this user and product
+    const deletedItem = await Cart.findOneAndDelete({ userId, productId });
 
     if (!deletedItem) {
       return res.status(404).json({ message: "Cart item not found" });
     }
 
-    res.status(200).json({ message: "Cart item deleted", item: deletedItem });
+    res.status(200).json({
+      message: "Cart item deleted successfully",
+      item: deletedItem
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete cart item", error });
+    res.status(500).json({
+      message: "Failed to delete cart item",
+      error: error.message
+    });
   }
 };
+
 
 module.exports = {
   addToCart,
