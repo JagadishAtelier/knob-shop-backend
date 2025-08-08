@@ -1,5 +1,5 @@
 const Cart = require("../models/Cart");
-const User = require("../models/User");
+const User = require("../models/FrontUser");
 const addToCart = async (req, res) => {
   try {
     const { userId, productId, quantity } = req.body;
@@ -36,7 +36,7 @@ const getCartByUserId = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const { userId, productId } = req.params;
+    const { userId, productId } = req.body;
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -62,7 +62,6 @@ const deleteCartItem = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   addToCart,
