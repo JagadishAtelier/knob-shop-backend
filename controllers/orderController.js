@@ -149,8 +149,74 @@ const deleteOrderById = async (req, res) => {
   }
 };
 
+/**
+ * Update order by custom orderId (e.g., ORD-0020)
+ * Expects JSON body with fields to update.
+ */
+const updateOrderByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params; // from URL param like /orders/by-order-id/:orderId
+
+    if (!orderId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order ID is required" });
+    }
+
+    const updates = req.body;
+
+    const allowedFields = [
+      "status",
+      "paymentStatus",
+      "shippingStatus",
+      "paymentReference",
+      "totalAmount",
+    ];
+    const invalidFields = Object.keys(updates).filter(
+      (field) => !allowedFields.includes(field)
+    );
+    if (invalidFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid fields in update: ${invalidFields.join(", ")}`,
+      });
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      { orderId }, // ✅ query by custom orderId field
+      updates,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedOrder) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found with given orderId" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order by orderId:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order",
+      error: error.message,
+    });
+  }
+};
+
+
+
 module.exports = {
   createOrderWithShipping,
+  updateOrderByOrderId,
   getAllOrders,
   getOrderById,
   deleteOrderById,

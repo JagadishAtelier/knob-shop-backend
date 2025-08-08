@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const ccAvenue  = require("../utils/ccAvenue");
+const Order = require("../models/Order");
 const { merchantId, accessCode, workingKey, redirectUrl, cancelUrl } = require("../config/ccavenueConfig");
 
 router.post("/initiate", async (req, res) => {
@@ -30,23 +31,55 @@ console.log("encRequest", encRequest);
   });   
 });
 
-router.post("/payment-response", (req, res) => {
-  const encryptedResponse = req.body.encResp;
+router.post("/payment-response", async (req, res) => {
+  try {
+    const encryptedResponse = req.body.encResp;
 
-  if (!encryptedResponse) {
-    return res.status(400).send("No encResp received");
-  }
+    if (!encryptedResponse) {
+      return res.status(400).send("No encResp received");
+    }
 
-  const decrypted = decrypt(encryptedResponse, workingKey);
-  const parsed = Object.fromEntries(new URLSearchParams(decrypted));
+    const decrypted = decrypt(encryptedResponse, workingKey);
+    const parsed = Object.fromEntries(new URLSearchParams(decrypted));
 
-  console.log("🔔 Payment response decrypted:", parsed);
+    console.log("🔔 Payment response decrypted:", parsed);
 
-  // Example: redirect user to frontend with order ID
-  if (parsed.order_status === "Success") {
-    return res.redirect(`https://knobsshop.store/order-confirmed?order_id=${parsed.order_id}`);
-  } else {
-    return res.redirect(`https://knobsshop.store/payment-failed?order_id=${parsed.order_id}`);
+    const orderId = parsed.order_id;
+    const paymentStatus = parsed.order_status; // should be "Success", "Failure", etc.
+
+    if (!orderId) {
+      console.error("No order_id found in payment response");
+      return res.status(400).send("Missing order_id in payment response");
+    }
+
+    // ✅ update order by orderId 
+    const updateFields = {
+      paymentStatus: paymentStatus.toLowerCase(), 
+      status: paymentStatus === "Success" ? "confirmed" : "pending",
+      paymentReference: parsed.tracking_id || parsed.bank_ref_no || "", 
+    };
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      { orderId }, 
+      updateFields,
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      console.error(`Order not found with orderId ${orderId}`);
+    } else {
+      console.log(`✅ Order ${orderId} updated:`, updateFields);
+    }
+
+    // 🔔 Finally redirect to frontend success/failure page
+    if (paymentStatus === "Success") {
+      return res.redirect(`https://knobsshop.store/order-confirmed?order_id=${orderId}`);
+    } else {
+      return res.redirect(`https://knobsshop.store/payment-failed?order_id=${orderId}`);
+    }
+  } catch (error) {
+    console.error("Error handling payment response:", error);
+    return res.status(500).send("Internal server error");
   }
 });
 
