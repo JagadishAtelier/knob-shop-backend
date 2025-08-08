@@ -30,4 +30,32 @@ console.log("encRequest", encRequest);
   });   
 });
 
+router.post("/payment-response", (req, res) => {
+  const encryptedResponse = req.body.encResp;
+
+  if (!encryptedResponse) {
+    return res.status(400).send("No encResp received");
+  }
+
+  const decrypted = decrypt(encryptedResponse, workingKey);
+  const parsed = Object.fromEntries(new URLSearchParams(decrypted));
+
+  console.log("🔔 Payment response decrypted:", parsed);
+
+  // Example: redirect user to frontend with order ID
+  if (parsed.order_status === "Success") {
+    return res.redirect(`https://knobsshop.store/order-confirmed?order_id=${parsed.order_id}`);
+  } else {
+    return res.redirect(`https://knobsshop.store/payment-failed?order_id=${parsed.order_id}`);
+  }
+});
+
+router.post("/payment-cancelled", (req, res) => {
+  const encryptedResponse = req.body.encResp;
+
+  console.log("🔔 Payment cancelled, encResp:", encryptedResponse);
+
+  return res.redirect(`https://knobsshop.store/payment-failed`);
+});
+
 module.exports = router;
