@@ -155,16 +155,18 @@ const deleteOrderById = async (req, res) => {
  */
 const updateOrderByOrderId = async (req, res) => {
   try {
-    const { orderId } = req.params; // from URL param like /orders/by-order-id/:orderId
+    const { orderId } = req.params; // This is the MongoDB _id from frontend
 
     if (!orderId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Order ID is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Order ID (_id) is required",
+      });
     }
 
     const updates = req.body;
 
+    // ✅ Restrict updates to allowed fields
     const allowedFields = [
       "status",
       "paymentStatus",
@@ -182,19 +184,17 @@ const updateOrderByOrderId = async (req, res) => {
       });
     }
 
-    const updatedOrder = await Order.findOneAndUpdate(
-      { orderId }, // ✅ query by custom orderId field
-      updates,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    // ✅ Use findByIdAndUpdate to match MongoDB _id
+    const updatedOrder = await Order.findByIdAndUpdate(orderId, updates, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedOrder) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found with given orderId" });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found with given _id",
+      });
     }
 
     res.status(200).json({
@@ -203,7 +203,7 @@ const updateOrderByOrderId = async (req, res) => {
       order: updatedOrder,
     });
   } catch (error) {
-    console.error("Error updating order by orderId:", error);
+    console.error("Error updating order:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update order",
@@ -211,6 +211,7 @@ const updateOrderByOrderId = async (req, res) => {
     });
   }
 };
+
 
 const getOrdersByUserId = async (req, res) => {
   try {
