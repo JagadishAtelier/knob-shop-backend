@@ -13,6 +13,10 @@ const categorySchema = new mongoose.Schema({
   categoryImageUrl: {
     type: String,
     default: "https://placehold.co/200x200?text=Category+Image"
+  },
+  bannerImageUrl: {
+    type: String,
+    default: "https://placehold.co/200x200?text=Category+Image"
   }
 }, { timestamps: true });
 
