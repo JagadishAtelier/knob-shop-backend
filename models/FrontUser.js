@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
   profileUrl: { type: String, default: "" },
   gender: { type: String},
   password: { type: String, required: true },
+  usedCoupons: [{ type: String }],
   dateofbirth: { type: Date },
   address: [{ type: mongoose.Schema.Types.ObjectId, ref: "Address" }],
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
