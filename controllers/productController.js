@@ -169,6 +169,7 @@ exports.searchProductsByParam = async (req, res) => {
         { name: { $regex: query, $options: "i" } },
         { brand: { $regex: query, $options: "i" } },
         { category: { $in: categoryIds } },
+        { productId: { $regex: query, $options: "i" } },
       ],
     })
       .populate("category")
