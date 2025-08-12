@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const consultationSchema = new mongoose.Schema({
   location: String,
-  pincode: String,
+  category: String,
   name: String,
   mobile: String,
   whatsapp: Boolean,
