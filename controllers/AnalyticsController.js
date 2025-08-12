@@ -1,6 +1,7 @@
 const AnalyticsSnapshot = require('../models/AnalyticsModel');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const FrontUser = require('../models/FrontUser');
 const Product = require('../models/Product');
 
 const getMonthName = (i) => new Date(0, i).toLocaleString('default', { month: 'short' });
@@ -8,7 +9,7 @@ const getMonthName = (i) => new Date(0, i).toLocaleString('default', { month: 's
 exports.generateAnalyticsSnapshot = async (req, res) => {
   try {
     const orders = await Order.find({});
-    const users = await User.find({});
+    const users = await FrontUser.find({});
     const products = await Product.find({});
 
     const totalSales = orders.reduce((acc, order) => 

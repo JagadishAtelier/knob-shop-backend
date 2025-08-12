@@ -16,8 +16,15 @@ const categorySchema = new mongoose.Schema({
   },
   bannerImageUrl: {
     type: String,
-    default: "https://placehold.co/200x200?text=Category+Image"
-  }
+    default: "https://placehold.co/200x200?text=Category+Banner+Image"
+  },
+  filters: [
+    {
+      name: String,          
+      type: String,      
+      options: [String],
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model("Category", categorySchema);

@@ -52,6 +52,7 @@ exports.getCategoryById = async (req, res) => {
 // Update Category
 exports.updateCategory = async (req, res) => {
   try {
+    console.log("Received payload:", req.body);
     const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!category) return res.status(404).json({ message: "Category not found" });
 
