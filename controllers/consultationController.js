@@ -26,7 +26,7 @@ exports.createConsultation = async (req, res) => {
       <p><strong>Mobile:</strong> ${consultation.mobile}</p>
       <p><strong>WhatsApp:</strong> ${consultation.whatsapp ? 'Yes' : 'No'}</p>
       <p><strong>Location:</strong> ${consultation.location}</p>
-      <p><strong>Pincode:</strong> ${consultation.pincode}</p>
+      <p><strong>Pincode:</strong> ${consultation.category}</p>
       <p><strong>Budget:</strong> ${consultation.budget}</p>
       <p><strong>Interest:</strong> ${consultation.interest}</p>
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
