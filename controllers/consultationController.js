@@ -35,7 +35,7 @@ exports.createConsultation = async (req, res) => {
     // Send email to admin
     await transporter.sendMail({
       from: `"Knobsshop Booking" <${process.env.EMAIL_USER}>`,
-      to: 'ecom@knobsshop.store', // Replace with actual admin email
+      to: 'jagadish.atelier@gmail.com', // Replace with actual admin email
       subject,
       html,
     });
