@@ -26,7 +26,7 @@ exports.createConsultation = async (req, res) => {
       <p><strong>Mobile:</strong> ${consultation.mobile}</p>
       <p><strong>WhatsApp:</strong> ${consultation.whatsapp ? 'Yes' : 'No'}</p>
       <p><strong>Location:</strong> ${consultation.location}</p>
-      <p><strong>Pincode:</strong> ${consultation.category}</p>
+      <p><strong>Category:</strong> ${consultation.category}</p>
       <p><strong>Budget:</strong> ${consultation.budget}</p>
       <p><strong>Interest:</strong> ${consultation.interest}</p>
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
@@ -35,7 +35,7 @@ exports.createConsultation = async (req, res) => {
     // Send email to admin
     await transporter.sendMail({
       from: `"Knobsshop Booking" <${process.env.EMAIL_USER}>`,
-      to: 'jagadish.atelier@gmail.com', // Replace with actual admin email
+      to: 'ecom@knobsshop.store', // Replace with actual admin email
       subject,
       html,
     });
