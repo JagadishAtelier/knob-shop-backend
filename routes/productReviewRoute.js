@@ -5,9 +5,9 @@ const {
   getReviewsByProduct,
   deleteReview
 } = require('../controllers/productReviewController');
-
+const upload = require('../middlewares/upload');
 // Create or Update a Review (userId in body)
-router.post('/:productId', createOrUpdateReview);
+router.post('/:productId',upload.single('image'), createOrUpdateReview);
 
 // Get all reviews for a product
 router.get('/:productId', getReviewsByProduct);
