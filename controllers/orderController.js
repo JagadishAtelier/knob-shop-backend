@@ -27,6 +27,17 @@ const createOrderWithShipping = async (req, res) => {
       0
     );
 
+    orderData.gstNumber =
+    orderData.gstNumber && orderData.gstNumber.trim()
+      ? orderData.gstNumber.trim()
+      : null;
+
+  orderData.companyName =
+    orderData.companyName && orderData.companyName.trim()
+      ? orderData.companyName.trim()
+      : null;
+
+      
     const newOrder = new Order(orderData);
     await newOrder.save();
 

@@ -1,6 +1,6 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
-
+const cloudinary = require('../middlewares/Cloudinary');
 exports.createOrUpdateReview = async (req, res) => {
   const { productId } = req.params;
   const { rating, comment } = req.body;
@@ -15,13 +15,37 @@ exports.createOrUpdateReview = async (req, res) => {
         return res.status(400).json({ message: 'You have already reviewed this product' });
       }
     }
+    let imageUrl = null;
+    if (req.file) {
+      const result = await cloudinary.uploader.upload_stream(
+        { folder: 'reviews' },
+        (error, uploaded) => {
+          if (error) throw error;
+          imageUrl = uploaded.secure_url;
+        }
+      );
+
+      // Need to use a Promise to handle stream upload properly
+      await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'reviews' },
+          (error, uploaded) => {
+            if (error) return reject(error);
+            imageUrl = uploaded.secure_url;
+            resolve();
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+    }
 
     // Create review
     const review = await Review.create({
       product: productId,
       user: userId,
       rating,
-      comment
+      comment,
+      image: imageUrl
     });
 
     // Update product review stats
