@@ -280,4 +280,97 @@ router.post("/phone-auth", async (req, res) => {
   }
 });
 
+
+// =================== Forgot Password ===================
+
+// Step 1: Send OTP for email
+router.post("/forgot-password/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await Otp.deleteMany({ email: normalizedEmail });
+    const newOtp = new Otp({ email: normalizedEmail, otp });
+    await newOtp.save();
+
+    // Send email
+    const mailOptions = {
+      from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
+      to: normalizedEmail,
+      subject: "Reset Password OTP",
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+    };
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// Step 2: Verify OTP for email
+router.post("/forgot-password/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Email & OTP required" });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const storedOtp = await Otp.findOne({ email: normalizedEmail, otp });
+    if (!storedOtp) return res.status(400).json({ error: "Invalid or expired OTP" });
+
+    await Otp.deleteOne({ _id: storedOtp._id });
+    res.status(200).json({ message: "OTP verified" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "OTP verification failed" });
+  }
+});
+
+// Step 3: Reset password for email
+router.post("/forgot-password/reset", async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) return res.status(400).json({ error: "Email & new password required" });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+// Reset password for phone (no OTP)
+router.post("/forgot-password/phone-reset", async (req, res) => {
+  try {
+    const { phone, newPassword } = req.body;
+    if (!phone || !newPassword) return res.status(400).json({ error: "Phone & new password required" });
+
+    const cleanPhone = phone.trim();
+    const user = await User.findOne({ phone: cleanPhone });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
 module.exports = router;
