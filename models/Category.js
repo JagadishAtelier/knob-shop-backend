@@ -20,9 +20,9 @@ const categorySchema = new mongoose.Schema({
   },
   filters: [
     {
-      name: String,          
-      type: String,      
-      options: [String],
+      name: { type: String, required: true },
+      type: { type: String, enum: ["select", "checkbox", "radio", "range"], required: true },
+      options: { type: [String], default: [] }
     }
   ]
 }, { timestamps: true });

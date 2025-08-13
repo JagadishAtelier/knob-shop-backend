@@ -45,6 +45,7 @@ exports.getCategoryById = async (req, res) => {
 
     res.json({ ...category._doc, productCount: count });
   } catch (err) {
+    console.log(({ message: err.message }))
     res.status(500).json({ message: err.message });
   }
 };
@@ -52,15 +53,41 @@ exports.getCategoryById = async (req, res) => {
 // Update Category
 exports.updateCategory = async (req, res) => {
   try {
-    console.log("Received payload:", req.body);
-    const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!category) return res.status(404).json({ message: "Category not found" });
+    let { filters, ...rest } = req.body;
+    console.log(Category.schema.paths.filters);
 
-    res.json(category);
+
+    // ✅ If filters comes as a string (multipart/form-data), parse it
+    if (typeof filters === "string") {
+      try {
+        filters = JSON.parse(filters.replace(/'/g, '"')); // replace single quotes with double quotes
+      } catch (err) {
+        console.error("Invalid filters format:", filters);
+        return res.status(400).json({ message: "Invalid filters JSON format" });
+      }
+    }
+
+    if (!Array.isArray(filters)) {
+      filters = [];
+    }
+
+    const updatedCategory = await Category.findByIdAndUpdate(
+      req.params.id,
+      { ...rest, filters },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.json(updatedCategory);
   } catch (err) {
+    console.error("Update category error:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // Delete Category
 exports.deleteCategory = async (req, res) => {
