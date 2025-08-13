@@ -11,6 +11,7 @@ const reviewSchema = new mongoose.Schema({
     ref: 'FrontUser',
     required: true,
   },
+  
   rating: {
     type: Number,
     required: true,
@@ -18,6 +19,7 @@ const reviewSchema = new mongoose.Schema({
     max: 5,
   },
   comment: String,
+  image: String,
   createdAt: {
     type: Date,
     default: Date.now,

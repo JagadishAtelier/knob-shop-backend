@@ -1,5 +1,7 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
+const cloudinary = require('../middlewares/Cloudinary');
+const streamifier = require("streamifier");
 
 // Create or Update a Review
 exports.createOrUpdateReview = async (req, res) => {
@@ -16,6 +18,22 @@ exports.createOrUpdateReview = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+    let imageUrl = null;
+    if (req.file) {
+      const uploadFromBuffer = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "reviews" },
+            (error, result) => {
+              if (result) resolve(result.secure_url);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(req.file.buffer).pipe(stream);
+        });
+      };
+      imageUrl = await uploadFromBuffer();
+    }
 
     // Check if the user already reviewed this product
     let review = await Review.findOne({ product: productId, user: userId });
@@ -24,6 +42,7 @@ exports.createOrUpdateReview = async (req, res) => {
       // Update existing review
       review.rating = rating;
       review.comment = comment || review.comment;
+      if (imageUrl) review.image = imageUrl; 
       await review.save();
       return res.status(200).json({ message: "Review updated successfully", review });
     }
@@ -33,7 +52,8 @@ exports.createOrUpdateReview = async (req, res) => {
       product: productId,
       user: userId,
       rating,
-      comment
+      comment,
+      image: imageUrl
     });
     await review.save();
 
