@@ -48,8 +48,14 @@ const orderSchema = new mongoose.Schema({
     default: "cod"
   },
   paymentReference: { type: String },
-  gstNumber: { type: String },
-companyName: { type: String },
+  gstNumber: {
+    type: String,
+    default: null
+  },
+  companyName: {
+    type: String,
+    default: null
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
