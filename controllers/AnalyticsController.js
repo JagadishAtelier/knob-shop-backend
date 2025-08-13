@@ -12,9 +12,9 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
     const users = await FrontUser.find({});
     const products = await Product.find({});
 
-    const totalSales = orders.reduce((acc, order) => 
+    const totalSales = orders.reduce((acc, order) =>
       acc + (order.status === 'delivered' ? order.totalAmount : 0), 0);
-    const salesReturn = orders.reduce((acc, order) => 
+    const salesReturn = orders.reduce((acc, order) =>
       acc + (order.status === 'cancelled' ? order.totalAmount : 0), 0);
 
     const totalPurchases = 16000;
@@ -43,7 +43,7 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
     const productSalesMap = {};
 
     orders.forEach(order => {
-      order.items.forEach(item => { 
+      order.items.forEach(item => {
         const key = item.productId.toString();
         if (!productSalesMap[key]) {
           productSalesMap[key] = { soldQty: 0, revenue: 0 };
@@ -70,12 +70,18 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
         })
     );
 
+    // ✅ Customers: users who have at least one order
+    const customerIds = [...new Set(orders.map(o => o.userId?.toString()))].filter(Boolean);
+    const totalCustomers = customerIds.length;
+
+    // ✅ Total registered users
+    const totalUsers = users.length;
+
+    // ✅ New users (last 7 days)
     const now = new Date();
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(now.getDate() - 7);
-
-    const newCustomers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
-    const returningCustomers = users.length - newCustomers;
+    const newUsers = await FrontUser.countDocuments({ createdAt: { $gte: oneWeekAgo } });
 
     const analytics = new AnalyticsSnapshot({
       totalSales,
@@ -84,9 +90,9 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
       purchaseReturn,
       monthlySales,
       totalOrders: orders.length,
-      totalCustomers: users.length,
-      newCustomers,
-      returningCustomers,
+      totalCustomers,    // only who ordered
+      totalUsers,        // all registered users
+      newUsers,
       totalSuppliers: 10090,
       orderStatusSummary,
       topSellingProducts,
@@ -106,6 +112,7 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
   }
 };
 
+
 exports.getLatestAnalyticsSnapshot = async (req, res) => {
   try {
     const { range = "Weekly" } = req.query;
@@ -124,7 +131,7 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
 
     // Fetch data within time range
     const orders = await Order.find({ createdAt: { $gte: startDate } });
-    const users = await User.find({ createdAt: { $gte: startDate } });
+    const users = await FrontUser.find({ createdAt: { $gte: startDate } });
 
     const totalSales = orders.reduce((acc, order) =>
       acc + (order.status === "delivered" ? order.totalAmount : 0), 0);
@@ -133,6 +140,7 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
 
     const totalPurchases = 16000;
     const purchaseReturn = 17000;
+    const totalUsers = await FrontUser.countDocuments()
 
     const monthlySales = Array(12).fill(0).map((_, i) => ({
       month: getMonthName(i),
@@ -186,7 +194,10 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
           };
         })        
     );
-
+// ✅ Customers: users who have at least one order
+    const customerIds = [...new Set(orders.map(o => o.userId?.toString()))].filter(Boolean);
+    const totalCustomers = customerIds.length;
+    // ✅ Total registered users    
     const newCustomers = users.length;
     const returningCustomers = await User.countDocuments() - newCustomers;
 
@@ -197,7 +208,8 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
       purchaseReturn,
       monthlySales,
       totalOrders: orders.length,
-      totalCustomers: await User.countDocuments(),
+      totalCustomers,
+      totalUsers,
       newCustomers,
       returningCustomers,
       totalSuppliers: 10090,

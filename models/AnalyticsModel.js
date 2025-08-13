@@ -13,6 +13,7 @@ const analyticsSchema = new mongoose.Schema({
   }],
   totalSuppliers: { type: Number, default: 0 },
   totalCustomers: { type: Number, default: 0 },
+  totalUsers: { type: Number, default: 0 },
   newCustomers: { type: Number, default: 0 },
   returningCustomers: { type: Number, default: 0 },
   totalOrders: { type: Number, default: 0 },
