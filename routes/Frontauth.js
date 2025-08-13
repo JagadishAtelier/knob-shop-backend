@@ -241,4 +241,43 @@ router.post("/verify-otp", async (req, res) => {
     res.status(500).json({ error: "Failed to verify OTP" });
   }
 });
+
+// ✅ Phone Login/Register (No OTP)
+router.post("/phone-auth", async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+    if (!phone) return res.status(400).json({ error: "Phone is required" });
+
+    const cleanPhone = phone.trim();
+    let user = await User.findOne({ phone: cleanPhone });
+
+    // If user exists → login
+    if (user) {
+      if (!password) {
+        return res.status(400).json({ error: "Password required to login" });
+      }
+      const match = await user.comparePassword(password);
+      if (!match) return res.status(401).json({ error: "Invalid password" });
+
+      const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+      return res.json({ success: true, message: "Login successful", token, user });
+    }
+
+    // If user doesn't exist → register
+    if (!password) {
+      return res.status(400).json({ error: "Please set a password to register" });
+    }
+
+    user = new User({ phone: cleanPhone, password });
+    await user.save();
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+    return res.json({ success: true, message: "Registration successful", token, user });
+
+  } catch (err) {
+    console.error("Phone auth error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 module.exports = router;
