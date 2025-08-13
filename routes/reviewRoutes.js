@@ -6,7 +6,6 @@ const {
   deleteReview
 } = require('../controllers/reviewController');
 const { protect } = require('../middlewares/authMiddleware');
-
 /**
  * @swagger
  * tags:
