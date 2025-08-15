@@ -151,4 +151,7 @@ router.put("/:id", protect, adminOnly, categoryController.updateCategory);
  */
 router.delete("/:id", protect, adminOnly, categoryController.deleteCategory);
 
+router.patch("/:id/subpage-type", categoryController.updateCategorySubpageType);
+router.get("/subpage/:subpageType", categoryController.getCategoryBySubpageType);
+
 module.exports = router;
