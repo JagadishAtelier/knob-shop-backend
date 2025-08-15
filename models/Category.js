@@ -24,7 +24,11 @@ const categorySchema = new mongoose.Schema({
       type: { type: String, enum: ["select", "checkbox", "radio", "range"], required: true },
       options: { type: [String], default: [] }
     }
-  ]
+  ],
+  subpageType: { 
+    type: String,
+    default: ""
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Category", categorySchema);

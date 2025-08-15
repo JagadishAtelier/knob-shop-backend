@@ -88,6 +88,55 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
+// Update only subpageType of a category
+exports.updateCategorySubpageType = async (req, res) => {
+  try {
+    const { subpageType } = req.body;
+    console.log(subpageType);
+
+    if (typeof subpageType !== "string") {
+      return res.status(400).json({ message: "subpageType must be a string" });
+    }
+
+    const updatedCategory = await Category.findByIdAndUpdate(
+      req.params.id,
+      { subpageType },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.json(updatedCategory);
+  } catch (err) {
+    console.error("Error updating subpageType:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get category by subpageType
+exports.getCategoryBySubpageType = async (req, res) => {
+  try {
+    const { subpageType } = req.params;
+
+    if (!subpageType) {
+      return res.status(400).json({ message: "subpageType is required" });
+    }
+
+    const category = await Category.findOne({ subpageType });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.json(category);
+  } catch (err) {
+    console.error("Error fetching category by subpageType:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 // Delete Category
 exports.deleteCategory = async (req, res) => {
