@@ -93,6 +93,10 @@ exports.updateCategorySubpageType = async (req, res) => {
   try {
     const { subpageType } = req.body;
     console.log(subpageType);
+    
+      if (typeof subpageType === "string" && subpageType.toLowerCase() === "none") {
+      subpageType = null;
+    }
 
     if (typeof subpageType !== "string") {
       return res.status(400).json({ message: "subpageType must be a string" });
