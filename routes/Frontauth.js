@@ -149,7 +149,7 @@ router.put("/:id", async (req, res) => {
     res.status(200).json({ message: "User updated", user: updatedUser });
   } catch (err) {
     console.error("Update error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error",err });
   }
 });
 
