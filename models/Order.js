@@ -23,14 +23,18 @@ const orderSchema = new mongoose.Schema({
   ],
   totalAmount: { type: Number, required: true },
   shippingAddress: {
-    name: { type: String },
-    phone: { type: String},
-    street: { type: String},
-    city: { type: String},
-    district: { type: String},
-    pincode: { type: String},
-    state: { type: String },
+    type: {
+      name: { type: String },
+      phone: { type: String },
+      street: { type: String },
+      city: { type: String },
+      district: { type: String },
+      pincode: { type: String },
+      state: { type: String },
+    },
+    default: null,
   },
+  
   dtdcReferenceNumber: { type: String },
   status: {
     type: String,
