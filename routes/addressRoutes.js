@@ -21,7 +21,7 @@ router.post('/create', async (req, res) => {
     res.status(201).json({ message: "Address created successfully", address: newAddress });
   } catch (error) {
     console.error("Create address error:", error);
-    res.status(500).json({ error: "Failed to create address" });
+    res.status(500).json({ error: "Failed to create address",error });
   }
 });
 
