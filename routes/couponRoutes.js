@@ -1,8 +1,9 @@
 // routes/couponRoutes.js
 const express = require("express");
 const router = express.Router();
-const { createCoupon, validateCoupon, markCouponUsed,getAvailableCoupons } = require("../controllers/couponController");
-const { Frontprotect } = require("../middlewares/authMiddleware");
+const { createCoupon, validateCoupon, markCouponUsed,getAvailableCoupons,getAllCoupons } = require("../controllers/couponController");
+const { Frontprotect,protect } = require("../middlewares/authMiddleware");
+const { adminOnly } = require("../middlewares/adminMiddleware");
 
 // Admin route to create coupon
 router.post("/", Frontprotect, /* adminCheck, */ createCoupon);
@@ -14,6 +15,7 @@ router.post("/validate", Frontprotect, validateCoupon);
 router.post("/mark-used", Frontprotect, markCouponUsed);
 
 router.get("/available", Frontprotect, getAvailableCoupons);
+router.get("/", getAllCoupons);
 
 
 module.exports = router;
