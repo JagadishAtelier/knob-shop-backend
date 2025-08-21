@@ -11,7 +11,6 @@ router.get("/all-users",async(req,res)=>{
     const users = await User.find()
     .select("-password")
     .populate("wishlist")
-    .populate("cart")
     res.status(200).json({
       success: true,
       count: users.length,
