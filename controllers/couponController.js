@@ -168,3 +168,21 @@ exports.getAllCoupons = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+exports.deleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find and delete the coupon by its ID
+    const coupon = await Coupon.findByIdAndDelete(id);
+
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: "Coupon not found" });
+    }
+
+    res.json({ success: true, message: "Coupon deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting coupon:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
