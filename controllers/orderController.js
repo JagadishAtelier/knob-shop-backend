@@ -8,7 +8,7 @@ const createOrderWithShipping = async (req, res) => {
     const orderData = req.body;
     console.log("Order Data:", orderData);
     // Validate order data
-    if (!orderData.userId || !orderData.items || !orderData.shippingAddress) {
+    if (!orderData.userId || !orderData.items) {
       return res.status(400).json({ message: "Missing required order data" });
     }
 
