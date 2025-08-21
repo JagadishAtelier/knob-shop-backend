@@ -6,7 +6,7 @@ const { Frontprotect,protect } = require("../middlewares/authMiddleware");
 const { adminOnly } = require("../middlewares/adminMiddleware");
 
 // Admin route to create coupon
-router.post("/", Frontprotect, /* adminCheck, */ createCoupon);
+router.post("/", protect, adminOnly,  createCoupon);
 
 // User route to validate coupon before payment
 router.post("/validate", Frontprotect, validateCoupon);

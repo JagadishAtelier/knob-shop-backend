@@ -50,14 +50,45 @@ exports.validateCoupon = async (req, res) => {
 
 exports.createCoupon = async (req, res) => {
   try {
-    const { code, type, value, expiryDate, isActive } = req.body;
+    const {
+      code,
+      type,
+      value,
+      expiryDate,
+      scheduled,
+      startDate,
+      appliesTo,
+      productId,
+    } = req.body;
+
+    // Basic validation
+    if (!code || !type || !value || !expiryDate || !startDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    // Optional validation for single product coupons
+    if (appliesTo === "single" && !productId) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Product ID is required for single-product coupons",
+        });
+    }
 
     const coupon = await Coupon.create({
       code,
       type,
       value,
+      startDate,
       expiryDate,
-      isActive,
+      // Set isActive based on whether the coupon is scheduled
+      isActive: !scheduled,
+      appliesTo,
+      // Set productId only if the coupon applies to a single product
+      productId: appliesTo === "single" ? productId : null,
     });
 
     res.status(201).json({ success: true, coupon });
