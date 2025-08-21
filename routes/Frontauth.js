@@ -242,37 +242,63 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-// ✅ Phone Login/Register (No OTP)
+// Phone Login/Register (No OTP)
 router.post("/phone-auth", async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { phone, password, name } = req.body;
     if (!phone) return res.status(400).json({ error: "Phone is required" });
+    if (!password) return res.status(400).json({ error: "Password is required" });
 
     const cleanPhone = phone.trim();
     let user = await User.findOne({ phone: cleanPhone });
 
-    // If user exists → login
+    // --- Existing user: login ---
     if (user) {
-      if (!password) {
-        return res.status(400).json({ error: "Password required to login" });
-      }
       const match = await user.comparePassword(password);
       if (!match) return res.status(401).json({ error: "Invalid password" });
 
       const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-      return res.json({ success: true, message: "Login successful", token, user });
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          cartCount: user.cart?.length || 0,
+          wishlistCount: user.wishlist?.length || 0,
+        },
+      });
     }
 
-    // If user doesn't exist → register
-    if (!password) {
-      return res.status(400).json({ error: "Please set a password to register" });
-    }
+    // --- New user: register ---
+    if (!name) return res.status(400).json({ error: "Name is required to register" });
 
-    user = new User({ phone: cleanPhone, password });
+    user = new User({
+      phone: cleanPhone,
+      password,
+      name,
+      profileUrl: "",
+      gender: "",
+    });
     await user.save();
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-    return res.json({ success: true, message: "Registration successful", token, user });
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        cartCount: user.cart?.length || 0,
+        wishlistCount: user.wishlist?.length || 0,
+      },
+    });
 
   } catch (err) {
     console.error("Phone auth error:", err);
