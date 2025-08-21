@@ -6,6 +6,21 @@ const router = express.Router();
 const transporter = require("../utils/mailer");
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
+router.get("/all-users",async(req,res)=>{
+  try {
+    const users = await User.find()
+    .select("-password")
+    .populate("wishlist")
+    .populate("cart")
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(400).json({error:"Failed to fetch user",error})
+  }
+})
 // ✅ Check if user exists
 router.get("/check", async (req, res) => {
   try {
