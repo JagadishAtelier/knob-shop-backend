@@ -6,6 +6,20 @@ const router = express.Router();
 const transporter = require("../utils/mailer");
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
+router.get("/all-users",async(req,res)=>{
+  try {
+    const users = await User.find()
+    .select("-password")
+    .populate("wishlist")
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(400).json({error:"Failed to fetch user",error})
+  }
+})
 // ✅ Check if user exists
 router.get("/check", async (req, res) => {
   try {
@@ -149,7 +163,7 @@ router.put("/:id", async (req, res) => {
     res.status(200).json({ message: "User updated", user: updatedUser });
   } catch (err) {
     console.error("Update error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error",err });
   }
 });
 
@@ -242,43 +256,87 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-// ✅ Phone Login/Register (No OTP)
-router.post("/phone-auth", async (req, res) => {
+// Phone Signup
+router.post("/phone-signup", async (req, res) => {
   try {
-    const { phone, password } = req.body;
-    if (!phone) return res.status(400).json({ error: "Phone is required" });
+    const { phone, password, name } = req.body;
+
+    if (!phone || !password || !name)
+      return res.status(400).json({ error: "Phone, password and name are required" });
 
     const cleanPhone = phone.trim();
-    let user = await User.findOne({ phone: cleanPhone });
 
-    // If user exists → login
-    if (user) {
-      if (!password) {
-        return res.status(400).json({ error: "Password required to login" });
-      }
-      const match = await user.comparePassword(password);
-      if (!match) return res.status(401).json({ error: "Invalid password" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ phone: cleanPhone });
+    if (existingUser)
+      return res.status(409).json({ error: "User already exists with this phone number! Please log in." });
 
-      const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-      return res.json({ success: true, message: "Login successful", token, user });
-    }
-
-    // If user doesn't exist → register
-    if (!password) {
-      return res.status(400).json({ error: "Please set a password to register" });
-    }
-
-    user = new User({ phone: cleanPhone, password });
+    // Create new user
+    const user = new User({
+      phone: cleanPhone,
+      password,
+      name,
+      profileUrl: "",
+      gender: "",
+    });
     await user.save();
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-    return res.json({ success: true, message: "Registration successful", token, user });
-
+    res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        cartCount: user.cart?.length || 0,
+        wishlistCount: user.wishlist?.length || 0,
+      },
+    });
   } catch (err) {
-    console.error("Phone auth error:", err);
+    console.error("Phone signup error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Phone Login
+router.post("/phone-login", async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+
+    if (!phone || !password)
+      return res.status(400).json({ error: "Phone and password are required" });
+
+    const cleanPhone = phone.trim();
+
+    const user = await User.findOne({ phone: cleanPhone });
+    if (!user) return res.status(404).json({ error: "User not found. Please sign up." });
+
+    const match = await user.comparePassword(password);
+    if (!match) return res.status(401).json({ error: "Invalid password. Please try again." });
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        cartCount: user.cart?.length || 0,
+        wishlistCount: user.wishlist?.length || 0,
+      },
+    });
+  } catch (err) {
+    console.error("Phone login error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 
 // =================== Forgot Password ===================
@@ -372,5 +430,27 @@ router.post("/forgot-password/phone-reset", async (req, res) => {
     res.status(500).json({ error: "Failed to reset password" });
   }
 });
+
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      user: deletedUser,
+    });
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
 
 module.exports = router;
