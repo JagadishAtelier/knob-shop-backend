@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   createOrUpdateReview,
   getReviewsByProduct,
-  deleteReview
+  deleteReview,
+  getAllReviews
 } = require('../controllers/productReviewController');
 const upload = require('../middlewares/upload');
 // Create or Update a Review (userId in body)
@@ -14,5 +15,7 @@ router.get('/:productId', getReviewsByProduct);
 
 // Delete a review (userId in body)
 router.delete('/:reviewId', deleteReview);
+
+router.get("/", getAllReviews);
 
 module.exports = router;
