@@ -110,4 +110,30 @@ app.use("/", (req, res) => {
 });
 app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",             // accept requests from anywhere
+    methods: ["GET", "POST"],
+    allowedHeaders: ["*"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("🔌 Admin/Dashboard connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("❌ Admin/Dashboard disconnected:", socket.id);
+  });
+});
+
+module.exports = { app, server, io };
+
+
 app.listen(PORT, () => console.log(`Server running on port crtl + click this url http://localhost:${PORT} access swagger docs url http://localhost:${PORT}/api-docs`));
