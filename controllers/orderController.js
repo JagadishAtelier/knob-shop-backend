@@ -2,6 +2,7 @@
 const Order = require("../models/Order");
 const User = require("../models/FrontUser");
 const Address = require("../models/userAddress");
+const { getIO } = require("../socket");
 const normalize = (str) => str?.trim().toLowerCase();
 const createOrderWithShipping = async (req, res) => {
   try {
@@ -71,6 +72,13 @@ const createOrderWithShipping = async (req, res) => {
         await user.save();
       }
     }
+    getIO().emit("newOrder", {
+      message: "📦 New Order Placed!",
+      orderId: newOrder._id,
+      totalAmount: newOrder.totalAmount,
+      userId: newOrder.userId,
+      createdAt: newOrder.createdAt,
+    });
     res
       .status(200)
       .json({ message: "Order and shipping label created", order: newOrder });
@@ -261,6 +269,33 @@ const getOrdersByUserId = async (req, res) => {
   }
 };
 
+// GET /api/admin/notifications
+const getUnseenOrders = async (req, res) => {
+  try {
+    const unseenOrders = await Order.find({ seenByAdmin: false })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, orders: unseenOrders });
+  } catch (err) {
+    console.error("Error fetching unseen orders:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch unseen orders", error: err.message });
+  }
+};
+
+// Mark order as seen
+const markOrderAsSeen = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findByIdAndUpdate(orderId, { seenByAdmin: true }, { new: true });
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    res.status(200).json({ success: true, order });
+  } catch (err) {
+    console.error("Error marking order as seen:", err);
+    res.status(500).json({ success: false, message: "Failed to update order", error: err.message });
+  }
+};
+
+
 
 module.exports = {
   createOrderWithShipping,
@@ -269,4 +304,6 @@ module.exports = {
   getOrderById,
   getOrdersByUserId,
   deleteOrderById,
+  getUnseenOrders,
+  markOrderAsSeen
 };
