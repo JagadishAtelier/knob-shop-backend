@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema({
       pincode: { type: String },
       state: { type: String },
     },
-    default: null,
+    default: {},
   },
   
   dtdcReferenceNumber: { type: String },
@@ -54,6 +54,7 @@ const orderSchema = new mongoose.Schema({
   paymentReference: { type: String },
   gstNumber: { type: String},
   companyName: { type: String},  
+  seenByAdmin: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

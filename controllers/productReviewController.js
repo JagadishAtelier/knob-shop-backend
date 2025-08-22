@@ -104,3 +104,18 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
+// Get All Reviews (Admin or Global)
+exports.getAllReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find()
+      .populate("user", "name email")
+      .populate("product", "name images") // also fetch product name & image
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ reviews });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

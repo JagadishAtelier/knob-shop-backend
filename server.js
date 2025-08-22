@@ -110,4 +110,17 @@ app.use("/", (req, res) => {
 });
 app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port crtl + click this url http://localhost:${PORT} access swagger docs url http://localhost:${PORT}/api-docs`));
+
+const http = require("http");
+const { init } = require("./socket");
+
+const server = http.createServer(app);
+init(server);
+
+// app.listen(PORT, () => console.log(`Server running on port crtl + click this url http://localhost:${PORT} access swagger docs url http://localhost:${PORT}/api-docs`));
+server.listen(PORT, () => {
+  console.log(
+    `🚀 Server running on port ${PORT}\n` +
+    `📖 Swagger docs: http://localhost:${PORT}/api-docs`
+  );
+});
