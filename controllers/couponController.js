@@ -6,10 +6,15 @@ exports.validateCoupon = async (req, res) => {
     const { userId, couponCode } = req.body;
 
     if (!userId || !couponCode) {
-      return res.status(400).json({ message: "User ID and coupon code are required" });
+      return res
+        .status(400)
+        .json({ message: "User ID and coupon code are required" });
     }
 
-    const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+    const coupon = await Coupon.findOne({
+      code: couponCode.toUpperCase(),
+      isActive: true,
+    });
 
     if (!coupon) {
       return res.status(400).json({ message: "Invalid coupon code" });
@@ -43,17 +48,47 @@ exports.validateCoupon = async (req, res) => {
   }
 };
 
-
 exports.createCoupon = async (req, res) => {
   try {
-    const { code, type, value, expiryDate, isActive } = req.body;
+    const {
+      code,
+      type,
+      value,
+      expiryDate,
+      scheduled,
+      startDate,
+      appliesTo,
+      productId,
+    } = req.body;
+
+    // Basic validation
+    if (!code || !type || !value || !expiryDate || !startDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    // Optional validation for single product coupons
+    if (appliesTo === "single" && !productId) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Product ID is required for single-product coupons",
+        });
+    }
 
     const coupon = await Coupon.create({
       code,
       type,
       value,
+      startDate,
       expiryDate,
-      isActive
+      // Set isActive based on whether the coupon is scheduled
+      isActive: !scheduled,
+      appliesTo,
+      // Set productId only if the coupon applies to a single product
+      productId: appliesTo === "single" ? productId : null,
     });
 
     res.status(201).json({ success: true, coupon });
@@ -62,16 +97,20 @@ exports.createCoupon = async (req, res) => {
   }
 };
 
-
 exports.markCouponUsed = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user._id;
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
+    const coupon = await Coupon.findOne({
+      code: code.toUpperCase(),
+      isActive: true,
+    });
 
     if (!coupon) {
-      return res.status(404).json({ success: false, message: "Invalid coupon" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid coupon" });
     }
 
     if (!coupon.usedBy.includes(userId)) {
@@ -88,7 +127,7 @@ exports.markCouponUsed = async (req, res) => {
 exports.getAvailableCoupons = async (req, res) => {
   try {
     const userId = req.user._id; // comes from auth middleware
- // or from req.user if using auth middleware
+    // or from req.user if using auth middleware
 
     if (!userId) {
       return res.status(400).json({ message: "User ID is required" });
@@ -107,12 +146,43 @@ exports.getAvailableCoupons = async (req, res) => {
     const coupons = await Coupon.find({
       isActive: true,
       expiryDate: { $gte: today },
-      code: { $nin: user.usedCoupons } // exclude already used coupons
+      code: { $nin: user.usedCoupons }, // exclude already used coupons
     }).lean();
 
     res.json({ success: true, coupons });
   } catch (error) {
     console.error("Error fetching coupons:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+exports.getAllCoupons = async (req, res) => {
+  try {
+    const coupons = await Coupon.find({});
+    if (!res) {
+      return res.status(404).json({ message: "Coupons not found" });
+    }
+
+    res.json({ success: true, coupons });
+  } catch (error) {
+    console.error("Error fetching coupons:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+exports.deleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find and delete the coupon by its ID
+    const coupon = await Coupon.findByIdAndDelete(id);
+
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: "Coupon not found" });
+    }
+
+    res.json({ success: true, message: "Coupon deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting coupon:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

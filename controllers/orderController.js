@@ -2,7 +2,7 @@
 const Order = require("../models/Order");
 const User = require("../models/FrontUser");
 const Address = require("../models/userAddress");
-const { io } = require("../server");
+const { getIO } = require("../socket");
 const normalize = (str) => str?.trim().toLowerCase();
 const createOrderWithShipping = async (req, res) => {
   try {
@@ -72,7 +72,7 @@ const createOrderWithShipping = async (req, res) => {
         await user.save();
       }
     }
-    io.emit("newOrder", {
+    getIO().emit("newOrder", {
       message: "📦 New Order Placed!",
       orderId: newOrder._id,
       totalAmount: newOrder.totalAmount,
