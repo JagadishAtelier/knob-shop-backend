@@ -2,6 +2,7 @@
 const Order = require("../models/Order");
 const User = require("../models/FrontUser");
 const Address = require("../models/userAddress");
+const { io } = require("../server");
 const normalize = (str) => str?.trim().toLowerCase();
 const createOrderWithShipping = async (req, res) => {
   try {
@@ -71,6 +72,13 @@ const createOrderWithShipping = async (req, res) => {
         await user.save();
       }
     }
+    io.emit("newOrder", {
+      message: "📦 New Order Placed!",
+      orderId: newOrder._id,
+      totalAmount: newOrder.totalAmount,
+      userId: newOrder.userId,
+      createdAt: newOrder.createdAt,
+    });
     res
       .status(200)
       .json({ message: "Order and shipping label created", order: newOrder });
