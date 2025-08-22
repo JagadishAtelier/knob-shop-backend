@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema({
       pincode: { type: String },
       state: { type: String },
     },
-    default: null,
+    default: {},
   },
   
   dtdcReferenceNumber: { type: String },
