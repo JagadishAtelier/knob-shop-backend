@@ -89,16 +89,17 @@ router.post("/login", async (req, res) => {
 
 // ✅ Signup user
 router.post("/signup", async (req, res) => {
-  const { email, phone, password } = req.body;
+  const { name, email, phone, password } = req.body;
+  console.log(name, email, phone, password)
 
-  if (!password || (!email && !phone)) {
+  if (!password || (!email && !phone) || !name) {
     return res.status(400).json({ error: "Missing signup data" });
   }
 
   const exists = await User.findOne(email ? { email } : { phone });
   if (exists) return res.status(409).json({ error: "User already exists" });
 
-  const user = new User({ email, phone, password });
+  const user = new User({ name, email, phone, password });
   await user.save();
 
   const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
