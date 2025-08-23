@@ -81,11 +81,6 @@ exports.getReviewsByProduct = async (req, res) => {
 // Delete a Review
 exports.deleteReview = async (req, res) => {
   const { reviewId } = req.params;
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ message: "User ID is required" });
-  }
 
   try {
     const review = await Review.findById(reviewId);
@@ -93,8 +88,11 @@ exports.deleteReview = async (req, res) => {
       return res.status(404).json({ message: "Review not found" });
     }
 
-    // Only allow owner to delete
-    if (review.user.toString() !== userId.toString()) {
+    // ✅ Allow if owner OR admin
+    if (
+      review.user.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not authorized to delete this review" });
     }
 
@@ -104,6 +102,7 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 
 // Get All Reviews (Admin or Global)
