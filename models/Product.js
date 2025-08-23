@@ -4,6 +4,7 @@ const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     productId: { type: String, required: true },
+    hsncode: { type: String, required:true },
     description: { type: String },
     brand: { type: String },
 
@@ -21,7 +22,7 @@ const productSchema = new mongoose.Schema(
     stock: { type: Number, default: 0 },
 
     images: [String], // Main images
-    video: String,    // YouTube video URL
+    video: String, // YouTube video URL
     brochure: String, // PDF brochure link
 
     // Features (with image)
@@ -79,16 +80,16 @@ const productSchema = new mongoose.Schema(
       videoUrl: String,
       content: String,
     },
-     discount: {
+    discount: {
       type: {
         type: String,
         enum: ["percentage", "fixed"],
         default: null,
       },
-      value: {type: Number, default: 0},
-      startDate: {type: Date, default: null},
-      endDate: {type: Date, default: null},
-      isActive: { type: Boolean, default: false }
+      value: { type: Number, default: 0 },
+      startDate: { type: Date, default: null },
+      endDate: { type: Date, default: null },
+      isActive: { type: Boolean, default: false },
     },
 
     // Product dimensions
@@ -99,13 +100,14 @@ const productSchema = new mongoose.Schema(
       length: Number,
     },
     brochure: String,
-  //for tracking who created the product
+    //for tracking who created the product
     createdBy: {
       type: mongoose.Schema.Types.ObjectId, // will added by controller using token
-      ref: 'User',
+      ref: "User",
       required: true,
-    }
+    },
+  },
+  { timestamps: true }
+);
 
-  }, { timestamps: true }); 
-
-  module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.model("Product", productSchema);

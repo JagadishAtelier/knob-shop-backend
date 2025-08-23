@@ -13,48 +13,6 @@ const { adminOnly } = require('../middlewares/adminMiddleware');
 
 /**
  * @swagger
- * /products/brochures:
- *   get:
- *     summary: Get all product brochures
- *     description: Returns a list of products with brochures, including name, SKU (productId), and brochure URL.
- *     tags:
- *       - Products
- *     responses:
- *       200:
- *         description: List of product brochures
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   name:
- *                     type: string
- *                     example: "Diamond Ring"
- *                   SKU:
- *                     type: string
- *                     example: "DR123456"
- *                   broucher:
- *                     type: string
- *                     format: uri
- *                     example: "https://cdn.example.com/brochures/diamond-ring.pdf"
- *       500:
- *         description: Server Error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Server Error"
- */
-
-router.get('/brochures',productController.getAllProductBrochures);
-
-/**
- * @swagger
  * /products:
  *   post:
  *     summary: Create a new product (admin only)
@@ -98,14 +56,70 @@ router.post('/', protect, adminOnly, productController.createProduct);
  * @swagger
  * /products:
  *   get:
- *     summary: Get all products
+ *     summary: Get all products with optional pagination, filtering, and sorting
  *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: The page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: The number of items per page.
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           example: "price:asc"
+ *         description: Sort products by a field in ascending or descending order (e.g., 'price:asc').
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter products by a specific category ID.
+ *       - in: query
+ *         name: searchQuery
+ *         schema:
+ *           type: string
+ *         description: Search products by name or brand.
  *     responses:
  *       200:
- *         description: List of products
+ *         description: A list of products with pagination details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalProducts:
+ *                       type: integer
+ *                       example: 100
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *       400:
+ *         description: Invalid input for category ID.
  *       500:
- *         description: Server error
+ *         description: Server error.
  */
+
 router.get('/', productController.getAllProducts);
 
 /**

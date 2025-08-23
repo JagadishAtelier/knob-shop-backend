@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const Category = require("../models/Category");
+const Review = require('../models/Review'); 
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
@@ -14,17 +15,130 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// @desc Get all products
+
+// @desc Get all products with pagination, filtering, and sorting (with optional random)
 exports.getAllProducts = async (req, res) => {
+  const { page = 1, limit, sortBy, category, searchQuery, random } = req.query;
+
+  const query = {};
+  if (category) {
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      return res.status(400).json({ message: "Invalid category ID." });
+    }
+    query.category = new mongoose.Types.ObjectId(category);
+  }
+
+  if (searchQuery) {
+    const regex = new RegExp(searchQuery, "i");
+    query.$or = [{ name: { $regex: regex } }, { brand: { $regex: regex } }];
+  }
+
   try {
-    const products = await Product.find()
-      .populate('category')
-      .populate('createdBy', 'name email');
-    res.json(products);
+    let products, totalProducts;
+    const size = limit ? parseInt(limit) : 20;
+    const pageNumber = parseInt(page);
+    const skipAmount = (pageNumber - 1) * size;
+
+    // Build the aggregation pipeline
+    const pipeline = [];
+
+    // Stage 1: Filter products based on query parameters
+    pipeline.push({ $match: query });
+
+    // Stage 2: Add $sample for random products if requested
+    if (random === "true") {
+      pipeline.push({ $sample: { size: size } });
+    }
+
+    // Stage 3: Look up reviews and calculate average rating
+    pipeline.push(
+      {
+        $lookup: {
+          from: "reviews",  // The name of your reviews collection
+          localField: "_id",
+          foreignField: "product",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          avgRating: {
+            $ifNull: [
+              { $avg: "$reviews.rating" },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          reviews: 0, // Exclude the 'reviews' array from the final output
+        },
+      }
+    );
+
+    // Stage 4: Add $lookup for category and createdBy (replaces .populate())
+    pipeline.push(
+      {
+        $lookup: {
+          from: "categories", // The name of your categories collection
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      {
+        $unwind: { path: "$category", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $lookup: {
+          from: "frontusers", // The name of your users collection
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdBy",
+        },
+      },
+      {
+        $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true }
+      }
+    );
+
+    // Stage 5: Sorting
+    const sortOptions = {};
+    if (sortBy) {
+      const [field, order] = sortBy.split(":");
+      sortOptions[field] = order === "asc" ? 1 : -1;
+      pipeline.push({ $sort: sortOptions });
+    }
+
+    // Stage 6: Pagination (skip and limit) if not a random query
+    if (random !== "true" && limit) {
+      pipeline.push({ $skip: skipAmount });
+      pipeline.push({ $limit: size });
+    }
+
+    // Execute the aggregation pipeline
+    products = await Product.aggregate(pipeline);
+
+    // Get the total count of products for pagination (using original query)
+    totalProducts = await Product.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: products,
+      pagination: limit
+        ? {
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / size),
+            currentPage: pageNumber,
+          }
+        : null,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // @desc Get single product by ID
 exports.getProductById = async (req, res) => {
@@ -93,7 +207,7 @@ exports.shareProductLink = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    const shareLink = `https://knob-shop-khaki.vercel.app/${product._id}`;
+    const shareLink = `https://https://knobsshop.store/${product._id}`;
     
     return res.status(200).json({ shareLink });
   } catch (error) {
@@ -102,26 +216,6 @@ exports.shareProductLink = async (req, res) => {
   }
 };
 
-// @desc Get All Brouchers
-exports.getAllProductBrochures = async (req, res) => {
-  try {
-    const products = await Product.find(
-      { brochure: { $ne: null } }, // fetch only if brochure exists
-      { name: 1, productId: 1, brochure: 1 } // projection
-    );
-
-    const response = products.map(p => ({
-      name: p.name,
-      SKU: p.productId,
-      brochure: p.brochure,
-    }));
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error("Error fetching brochures:", error);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
 
 // @desc Get products by brand name (case-insensitive, handles spaces, etc.)
 exports.getProductsByBrand = async (req, res) => {

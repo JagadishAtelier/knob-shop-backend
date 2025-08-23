@@ -120,7 +120,7 @@ init(server);
 // app.listen(PORT, () => console.log(`Server running on port crtl + click this url http://localhost:${PORT} access swagger docs url http://localhost:${PORT}/api-docs`));
 server.listen(PORT, () => {
   console.log(
-    `🚀 Server running on port ${PORT}\n` +
+    `🚀 Server running on port http://localhost:${PORT}\n` +
     `📖 Swagger docs: http://localhost:${PORT}/api-docs`
   );
 });
