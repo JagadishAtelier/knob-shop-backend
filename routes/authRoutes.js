@@ -6,6 +6,7 @@ const {
   resetPassword,
   getUserByIdWithCart,
   getAllUsersWithCart,
+  updateUser,
   Check,
   UserLogin,
   UserSignup,
@@ -184,5 +185,7 @@ router.get("/users", getAllUsersWithCart);
  *         description: Failed to fetch user
  */
 router.get("/user/:id", getUserByIdWithCart);
+
+router.put("/:id", updateUser);
 
 module.exports = router;
