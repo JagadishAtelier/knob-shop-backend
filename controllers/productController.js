@@ -14,17 +14,78 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// @desc Get all products
+
+// @desc Get all products with pagination, filtering, and sorting (with optional random)
 exports.getAllProducts = async (req, res) => {
+  const { page = 1, limit, sortBy, category, searchQuery, random } = req.query;
+
+  const query = {};
+  if (category) {
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      return res.status(400).json({ message: "Invalid category ID." });
+    }
+    query.category = category;
+  }
+
+  if (searchQuery) {
+    const regex = new RegExp(searchQuery, "i");
+    query.$or = [{ name: { $regex: regex } }, { brand: { $regex: regex } }];
+  }
+
   try {
-    const products = await Product.find()
-      .populate('category')
-      .populate('createdBy', 'name email');
-    res.json(products);
+    let products, totalProducts;
+
+    if (random === "true") {
+      // 🎲 Randomized products
+      const size = limit ? parseInt(limit) : 20; // default random size
+      products = await Product.aggregate([
+        { $match: query },
+        { $sample: { size } },
+      ]);
+      totalProducts = await Product.countDocuments(query);
+    } else {
+      // Normal query + sorting
+      const sortOptions = {};
+      if (sortBy) {
+        const [field, order] = sortBy.split(":");
+        sortOptions[field] = order === "asc" ? 1 : -1;
+      }
+
+      totalProducts = await Product.countDocuments(query);
+
+      if (limit) {
+        // Apply pagination only if limit is provided
+        products = await Product.find(query)
+          .sort(sortOptions)
+          .skip((parseInt(page) - 1) * parseInt(limit))
+          .limit(parseInt(limit))
+          .populate("category")
+          .populate("createdBy", "name email");
+      } else {
+        // No limit → fetch all
+        products = await Product.find(query)
+          .sort(sortOptions)
+          .populate("category")
+          .populate("createdBy", "name email");
+      }
+    }
+
+    res.json({
+      success: true,
+      data: products,
+      pagination: limit
+        ? {
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / parseInt(limit)),
+            currentPage: parseInt(page),
+          }
+        : null, // no pagination if limit not provided
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // @desc Get single product by ID
 exports.getProductById = async (req, res) => {
@@ -93,7 +154,7 @@ exports.shareProductLink = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    const shareLink = `https://knob-shop-khaki.vercel.app/${product._id}`;
+    const shareLink = `https://https://knobsshop.store/${product._id}`;
     
     return res.status(200).json({ shareLink });
   } catch (error) {
@@ -102,26 +163,6 @@ exports.shareProductLink = async (req, res) => {
   }
 };
 
-// @desc Get All Brouchers
-exports.getAllProductBrochures = async (req, res) => {
-  try {
-    const products = await Product.find(
-      { brochure: { $ne: null } }, // fetch only if brochure exists
-      { name: 1, productId: 1, brochure: 1 } // projection
-    );
-
-    const response = products.map(p => ({
-      name: p.name,
-      SKU: p.productId,
-      brochure: p.brochure,
-    }));
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error("Error fetching brochures:", error);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
 
 // @desc Get products by brand name (case-insensitive, handles spaces, etc.)
 exports.getProductsByBrand = async (req, res) => {
