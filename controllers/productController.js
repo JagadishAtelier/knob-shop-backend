@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const Category = require("../models/Category");
+const Review = require('../models/Review'); 
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
@@ -24,7 +25,7 @@ exports.getAllProducts = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(category)) {
       return res.status(400).json({ message: "Invalid category ID." });
     }
-    query.category = category;
+    query.category = new mongoose.Types.ObjectId(category);
   }
 
   if (searchQuery) {
@@ -34,41 +35,93 @@ exports.getAllProducts = async (req, res) => {
 
   try {
     let products, totalProducts;
+    const size = limit ? parseInt(limit) : 20;
+    const pageNumber = parseInt(page);
+    const skipAmount = (pageNumber - 1) * size;
 
+    // Build the aggregation pipeline
+    const pipeline = [];
+
+    // Stage 1: Filter products based on query parameters
+    pipeline.push({ $match: query });
+
+    // Stage 2: Add $sample for random products if requested
     if (random === "true") {
-      // 🎲 Randomized products
-      const size = limit ? parseInt(limit) : 20; // default random size
-      products = await Product.aggregate([
-        { $match: query },
-        { $sample: { size } },
-      ]);
-      totalProducts = await Product.countDocuments(query);
-    } else {
-      // Normal query + sorting
-      const sortOptions = {};
-      if (sortBy) {
-        const [field, order] = sortBy.split(":");
-        sortOptions[field] = order === "asc" ? 1 : -1;
-      }
-
-      totalProducts = await Product.countDocuments(query);
-
-      if (limit) {
-        // Apply pagination only if limit is provided
-        products = await Product.find(query)
-          .sort(sortOptions)
-          .skip((parseInt(page) - 1) * parseInt(limit))
-          .limit(parseInt(limit))
-          .populate("category")
-          .populate("createdBy", "name email");
-      } else {
-        // No limit → fetch all
-        products = await Product.find(query)
-          .sort(sortOptions)
-          .populate("category")
-          .populate("createdBy", "name email");
-      }
+      pipeline.push({ $sample: { size: size } });
     }
+
+    // Stage 3: Look up reviews and calculate average rating
+    pipeline.push(
+      {
+        $lookup: {
+          from: "reviews",  // The name of your reviews collection
+          localField: "_id",
+          foreignField: "product",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          avgRating: {
+            $ifNull: [
+              { $avg: "$reviews.rating" },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          reviews: 0, // Exclude the 'reviews' array from the final output
+        },
+      }
+    );
+
+    // Stage 4: Add $lookup for category and createdBy (replaces .populate())
+    pipeline.push(
+      {
+        $lookup: {
+          from: "categories", // The name of your categories collection
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      {
+        $unwind: { path: "$category", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $lookup: {
+          from: "frontusers", // The name of your users collection
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdBy",
+        },
+      },
+      {
+        $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true }
+      }
+    );
+
+    // Stage 5: Sorting
+    const sortOptions = {};
+    if (sortBy) {
+      const [field, order] = sortBy.split(":");
+      sortOptions[field] = order === "asc" ? 1 : -1;
+      pipeline.push({ $sort: sortOptions });
+    }
+
+    // Stage 6: Pagination (skip and limit) if not a random query
+    if (random !== "true" && limit) {
+      pipeline.push({ $skip: skipAmount });
+      pipeline.push({ $limit: size });
+    }
+
+    // Execute the aggregation pipeline
+    products = await Product.aggregate(pipeline);
+
+    // Get the total count of products for pagination (using original query)
+    totalProducts = await Product.countDocuments(query);
 
     res.json({
       success: true,
@@ -76,10 +129,10 @@ exports.getAllProducts = async (req, res) => {
       pagination: limit
         ? {
             totalProducts,
-            totalPages: Math.ceil(totalProducts / parseInt(limit)),
-            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalProducts / size),
+            currentPage: pageNumber,
           }
-        : null, // no pagination if limit not provided
+        : null,
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
