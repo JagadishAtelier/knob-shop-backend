@@ -33,9 +33,8 @@ exports.validateCoupon = async (req, res) => {
       return res.status(400).json({ message: "Coupon already used" });
     }
 
-    // Mark coupon as used
-    user.usedCoupons.push(couponCode.toUpperCase());
-    await user.save();
+    // user.usedCoupons.push(couponCode.toUpperCase());
+    // await user.save();
 
     res.json({
       message: "Coupon applied successfully",
@@ -161,7 +160,6 @@ exports.getAllCoupons = async (req, res) => {
     if (!res) {
       return res.status(404).json({ message: "Coupons not found" });
     }
-
     res.json({ success: true, coupons });
   } catch (error) {
     console.error("Error fetching coupons:", error);
