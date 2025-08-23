@@ -4,22 +4,40 @@ const nodemailer = require("nodemailer");
 const generateToken = require("../utils/generateToken");
 const Cart = require("../models/Cart");
 // const admin = require("../utils/firebaseAdmin");
+// REGISTER USER (with profileUrl from frontend)
 exports.register = async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const userExists = await User.findOne({ email });
-  if (userExists)
-    return res.status(400).json({ message: "User already exists" });
+  try {
+    const { name, email, password, phone, role, profileUrl } = req.body;
 
-  const user = await User.create({ name, email, password, role });
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-  res.status(201).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    token: generateToken(user._id, user.role),
-  });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      role,
+      profileUrl: profileUrl || "", // take from frontend
+    });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      profileUrl: user.profileUrl,
+      token: generateToken(user._id, user.role),
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
 
 exports.login = async (req, res) => {
   try {
@@ -335,4 +353,37 @@ exports.sendLoginOTP = async (req, res) => {
     role: user.role,
     token: generateToken(user._id, user.role),
   });
+};
+
+// UPDATE USER (PUT) with profileUrl from frontend
+exports.updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { name, email, phone, password, role, profileUrl } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update fields if provided
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (role) user.role = role;
+    if (profileUrl) user.profileUrl = profileUrl; // frontend sends url
+    if (password) user.password = password; // will be hashed in pre("save")
+
+    await user.save();
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      profileUrl: user.profileUrl,
+    });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
