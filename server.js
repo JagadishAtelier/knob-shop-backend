@@ -24,6 +24,7 @@ const analyticRoutes = require('./routes/AnalyticRoutes');
 const brochureRoutes = require("./routes/BroucherRouter");
 const couponRoutes = require('./routes/couponRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
+const shelfRoutes = require("./routes/shelfRoutes");
 dotenv.config();
 connectDB();
 
@@ -64,6 +65,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/analytic', analyticRoutes);
 app.use("/api/brochures", brochureRoutes);
 app.use("/api/coupons", couponRoutes);
+app.use("/api/shelves", shelfRoutes);
 app.use('/api', consultationRoutes);
 app.use("/", (req, res) => {
   res.send(`
