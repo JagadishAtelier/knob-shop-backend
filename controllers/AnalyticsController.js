@@ -1,10 +1,11 @@
-const AnalyticsSnapshot = require('../models/AnalyticsModel');
-const Order = require('../models/Order');
-const User = require('../models/User');
-const FrontUser = require('../models/FrontUser');
-const Product = require('../models/Product');
+const AnalyticsSnapshot = require("../models/AnalyticsModel");
+const Order = require("../models/Order");
+const User = require("../models/User");
+const FrontUser = require("../models/FrontUser");
+const Product = require("../models/Product");
 
-const getMonthName = (i) => new Date(0, i).toLocaleString('default', { month: 'short' });
+const getMonthName = (i) =>
+  new Date(0, i).toLocaleString("default", { month: "short" });
 
 exports.generateAnalyticsSnapshot = async (req, res) => {
   try {
@@ -12,38 +13,46 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
     const users = await FrontUser.find({});
     const products = await Product.find({});
 
-    const totalSales = orders.reduce((acc, order) =>
-      acc + (order.status === 'delivered' ? order.totalAmount : 0), 0);
-    const salesReturn = orders.reduce((acc, order) =>
-      acc + (order.status === 'cancelled' ? order.totalAmount : 0), 0);
+    const totalSales = orders.reduce(
+      (acc, order) =>
+        acc + (order.status === "delivered" ? order.totalAmount : 0),
+      0
+    );
+    const salesReturn = orders.reduce(
+      (acc, order) =>
+        acc + (order.status === "cancelled" ? order.totalAmount : 0),
+      0
+    );
 
     const totalPurchases = 16000;
     const purchaseReturn = 17000;
 
-    const monthlySales = Array(12).fill(0).map((_, i) => ({
-      month: getMonthName(i),
-      totalSales: 0,
-      totalPurchases: 0
-    }));
+    const monthlySales = Array(12)
+      .fill(0)
+      .map((_, i) => ({
+        month: getMonthName(i),
+        totalSales: 0,
+        totalPurchases: 0,
+      }));
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const month = new Date(order.createdAt).getMonth();
-      if (order.status === 'delivered') {
+      if (order.status === "delivered") {
         monthlySales[month].totalSales += order.totalAmount;
       }
     });
 
     const orderStatusSummary = {
-      success: orders.filter(o => o.status === 'delivered').length,
-      pending: orders.filter(o => o.status === 'pending').length,
-      received: orders.filter(o => o.status === 'confirmed').length,
-      cancelled: orders.filter(o => o.status === 'cancelled').length
+      success: orders.filter((o) => o.status === "delivered").length,
+      pending: orders.filter((o) => o.status === "pending").length,
+      received: orders.filter((o) => o.status === "confirmed").length,
+      cancelled: orders.filter((o) => o.status === "cancelled").length,
     };
 
     const productSalesMap = {};
 
-    orders.forEach(order => {
-      order.items.forEach(item => {
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
         const key = item.productId.toString();
         if (!productSalesMap[key]) {
           productSalesMap[key] = { soldQty: 0, revenue: 0 };
@@ -52,26 +61,36 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
         productSalesMap[key].revenue += item.quantity * item.price;
       });
     });
-
-    const topSellingProducts = await Promise.all(
-      Object.entries(productSalesMap)
-        .sort((a, b) => b[1].soldQty - a[1].soldQty)
-        .slice(0, 3)
-        .map(async ([productId, stats]) => {
-          const product = await Product.findById(productId);
-          return {
-            productId,
-            name: product?.name || 'Unknown',
-            price: product?.price || 0,
-            soldQty: stats.soldQty,
-            revenue: stats.revenue,
-            changeRate: Math.floor(Math.random() * 30)
-          };
-        })
+    const sortedProductIds = Object.entries(productSalesMap).sort(
+      (a, b) => b[1].soldQty - a[1].soldQty
     );
 
+    let results = [];
+
+    for (const [productId, stats] of sortedProductIds) {
+      if (results.length >= 3) break;
+
+      const product = await Product.findById(productId);
+
+      if (product?.name) {
+        results.push({
+          productId,
+          name: product.name,
+          image:product.images[0],
+          price: product.price || 0,
+          soldQty: stats.soldQty,
+          revenue: stats.revenue,
+          changeRate: Math.floor(Math.random() * 30),
+        });
+      }
+    }
+
+    const topSellingProducts = results;
+
     // ✅ Customers: users who have at least one order
-    const customerIds = [...new Set(orders.map(o => o.userId?.toString()))].filter(Boolean);
+    const customerIds = [
+      ...new Set(orders.map((o) => o.userId?.toString())),
+    ].filter(Boolean);
     const totalCustomers = customerIds.length;
 
     // ✅ Total registered users
@@ -81,7 +100,9 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
     const now = new Date();
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(now.getDate() - 7);
-    const newUsers = await FrontUser.countDocuments({ createdAt: { $gte: oneWeekAgo } });
+    const newUsers = await FrontUser.countDocuments({
+      createdAt: { $gte: oneWeekAgo },
+    });
 
     const analytics = new AnalyticsSnapshot({
       totalSales,
@@ -90,8 +111,8 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
       purchaseReturn,
       monthlySales,
       totalOrders: orders.length,
-      totalCustomers,    // only who ordered
-      totalUsers,        // all registered users
+      totalCustomers, // only who ordered
+      totalUsers, // all registered users
       newUsers,
       totalSuppliers: 10090,
       orderStatusSummary,
@@ -99,19 +120,17 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
       customerSatisfaction: {
         averageRating: 4.6,
         positiveFeedbacks: 340,
-        negativeFeedbacks: 22
-      }
+        negativeFeedbacks: 22,
+      },
     });
 
     await analytics.save();
-    res.status(201).json({ message: 'Analytics snapshot created', analytics });
-
+    res.status(201).json({ message: "Analytics snapshot created", analytics });
   } catch (err) {
-    console.error('Analytics generation error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Analytics generation error:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 exports.getLatestAnalyticsSnapshot = async (req, res) => {
   try {
@@ -133,33 +152,41 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
     const orders = await Order.find({ createdAt: { $gte: startDate } });
     const users = await FrontUser.find({ createdAt: { $gte: startDate } });
 
-    const totalSales = orders.reduce((acc, order) =>
-      acc + (order.status === "delivered" ? order.totalAmount : 0), 0);
-    const salesReturn = orders.reduce((acc, order) =>
-      acc + (order.status === "cancelled" ? order.totalAmount : 0), 0);
+    const totalSales = orders.reduce(
+      (acc, order) =>
+        acc + (order.status === "delivered" ? order.totalAmount : 0),
+      0
+    );
+    const salesReturn = orders.reduce(
+      (acc, order) =>
+        acc + (order.status === "cancelled" ? order.totalAmount : 0),
+      0
+    );
 
     const totalPurchases = 16000;
     const purchaseReturn = 17000;
-    const totalUsers = await FrontUser.countDocuments()
+    const totalUsers = await FrontUser.countDocuments();
 
-    const monthlySales = Array(12).fill(0).map((_, i) => ({
-      month: getMonthName(i),
-      totalSales: 0,
-      totalPurchases: 0
-    }));
+    const monthlySales = Array(12)
+      .fill(0)
+      .map((_, i) => ({
+        month: getMonthName(i),
+        totalSales: 0,
+        totalPurchases: 0,
+      }));
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const month = new Date(order.createdAt).getMonth();
-      if (order.status === 'delivered') {
+      if (order.status === "delivered") {
         monthlySales[month].totalSales += order.totalAmount;
       }
     });
 
     const orderStatusSummary = {
-      success: orders.filter(o => o.status === 'delivered').length,
-      pending: orders.filter(o => o.status === 'pending').length,
-      received: orders.filter(o => o.status === 'confirmed').length,
-      cancelled: orders.filter(o => o.status === 'cancelled').length
+      success: orders.filter((o) => o.status === "delivered").length,
+      pending: orders.filter((o) => o.status === "pending").length,
+      received: orders.filter((o) => o.status === "confirmed").length,
+      cancelled: orders.filter((o) => o.status === "cancelled").length,
     };
 
     const productSalesMap = {};
@@ -174,32 +201,39 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
       }
     }
 
-    const topSellingProducts = await Promise.all(
-      Object.entries(productSalesMap)
-        .sort((a, b) => b[1].soldQty - a[1].soldQty)
-        .slice(0, 3)
-        .map(async ([productId, stats]) => {
-          const product = await Product.findById(productId);
-          return {
-            productId,
-            name: product?.name || "Unknown",
-            price: product?.price || 0,
-            image: product?.images?.[0] || "",       // ✅ get first image from array
-            category: product?.category?.toString() || "", // optionally populate if needed
-            brand: product?.brand || "",
-            soldQty: stats.soldQty,
-            revenue: Number(stats.revenue.toFixed(2)),
-            changeRate: Number((Math.random() * 30).toFixed(2))  // Optional: keep it 2 decimal places if needed
-            
-          };
-        })        
+    const sortedProductIds = Object.entries(productSalesMap).sort(
+      (a, b) => b[1].soldQty - a[1].soldQty
     );
-// ✅ Customers: users who have at least one order
-    const customerIds = [...new Set(orders.map(o => o.userId?.toString()))].filter(Boolean);
+
+    let results = [];
+
+    for (const [productId, stats] of sortedProductIds) {
+      if (results.length >= 3) break; // stop when we already have 3
+
+      const product = await Product.findById(productId);
+
+      if (product?.name) {
+        results.push({
+          productId,
+          name: product.name,
+          image:product.images[0],
+          price: product.variant[0].sizes[0].sellingPrice || 0,
+          soldQty: stats.soldQty,
+          revenue: stats.revenue,
+          changeRate: Math.floor(Math.random() * 30),
+        });
+      }
+    }
+
+    const topSellingProducts = results;
+    // ✅ Customers: users who have at least one order
+    const customerIds = [
+      ...new Set(orders.map((o) => o.userId?.toString())),
+    ].filter(Boolean);
     const totalCustomers = customerIds.length;
-    // ✅ Total registered users    
+    // ✅ Total registered users
     const newCustomers = users.length;
-    const returningCustomers = await User.countDocuments() - newCustomers;
+    const returningCustomers = (await User.countDocuments()) - newCustomers;
 
     const result = {
       totalSales,
@@ -218,12 +252,11 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
       customerSatisfaction: {
         averageRating: 4.6,
         positiveFeedbacks: 340,
-        negativeFeedbacks: 22
-      }
+        negativeFeedbacks: 22,
+      },
     };
 
     res.json(result);
-
   } catch (err) {
     console.error("Error fetching analytics:", err);
     res.status(500).json({ message: "Failed to fetch analytics" });
@@ -232,15 +265,15 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
 
 exports.getChartData = async (req, res) => {
   try {
-    const { filter = '1Y' } = req.query;
+    const { filter = "1Y" } = req.query;
     const now = new Date();
     let startDate = new Date();
 
-    if (filter === '1D') {
+    if (filter === "1D") {
       startDate.setDate(now.getDate() - 1);
-    } else if (filter === '1W') {
+    } else if (filter === "1W") {
       startDate.setDate(now.getDate() - 7);
-    } else if (filter === '1M') {
+    } else if (filter === "1M") {
       startDate.setMonth(now.getMonth() - 1);
     } else {
       startDate.setFullYear(now.getFullYear() - 1);
@@ -250,29 +283,30 @@ exports.getChartData = async (req, res) => {
 
     // group by date/month label depending on filter
     const grouping = {};
-    orders.forEach(o => {
+    orders.forEach((o) => {
       const d = new Date(o.createdAt);
       let label;
-      if (filter === '1D') label = d.getHours().toString().padStart(2, '0') + ':00';
-      else if (filter === '1W') label = d.toLocaleString('default', { weekday: 'short' });
-      else if (filter === '1M') label = getMonthName(d.getMonth());
+      if (filter === "1D")
+        label = d.getHours().toString().padStart(2, "0") + ":00";
+      else if (filter === "1W")
+        label = d.toLocaleString("default", { weekday: "short" });
+      else if (filter === "1M") label = getMonthName(d.getMonth());
       else label = getMonthName(d.getMonth());
 
-      if (!grouping[label]) grouping[label] = { totalSales: 0, totalPurchases: 0 };
-      if (o.status === 'delivered') grouping[label].totalSales += o.totalAmount;
+      if (!grouping[label])
+        grouping[label] = { totalSales: 0, totalPurchases: 0 };
+      if (o.status === "delivered") grouping[label].totalSales += o.totalAmount;
       // if purchases logic exists, apply here similarly
     });
 
     const data = Object.entries(grouping).map(([label, stats]) => ({
       label,
-      ...stats
+      ...stats,
     }));
 
     res.json({ data });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to fetch chart data' });
+    res.status(500).json({ message: "Failed to fetch chart data" });
   }
 };
-
-
