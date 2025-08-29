@@ -95,6 +95,38 @@ exports.createCoupon = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+exports.updateCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Auto-update isActive based on startDate + expiryDate
+    if (updateData.startDate || updateData.expiryDate) {
+      const now = new Date();
+      const startDate = new Date(updateData.startDate || now);
+      const expiryDate = new Date(updateData.expiryDate || now);
+
+      updateData.isActive = startDate <= now && expiryDate >= now;
+    }
+
+    const updatedCoupon = await Coupon.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedCoupon) {
+      return res.status(404).json({ message: "Coupon not found" });
+    }
+
+    res.json({
+      message: "Coupon updated successfully",
+      coupon: updatedCoupon,
+    });
+  } catch (error) {
+    console.error("Error updating coupon:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 exports.markCouponUsed = async (req, res) => {
   try {
