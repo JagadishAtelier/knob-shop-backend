@@ -5,7 +5,7 @@ const { createCoupon, validateCoupon, markCouponUsed,getAvailableCoupons,getAllC
 const { Frontprotect,protect } = require("../middlewares/authMiddleware");
 const { adminOnly } = require("../middlewares/adminMiddleware");
 
-// Admin route to create coupon
+// Admin route to create and update coupon
 router.post("/", protect, adminOnly,  createCoupon);
 router.put("/update/:id", protect, adminOnly,  updateCoupon);
 
