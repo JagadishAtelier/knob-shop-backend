@@ -3,9 +3,9 @@ const Shelf = require("../models/shelfModel");
 // Create Shelf
 exports.createShelf = async (req, res) => {
     try {
-        const { heading, content, buttonText, imageUrl } = req.body;
+        const { heading, content, imageUrl } = req.body;
 
-        const newShelf = new Shelf({ heading, content, buttonText, imageUrl });
+        const newShelf = new Shelf({ heading, content, imageUrl });
         await newShelf.save();
 
         res.status(201).json({ success: true, data: newShelf });
