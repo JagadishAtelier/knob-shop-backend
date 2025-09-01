@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const shelfSchema = new mongoose.Schema({
-    heading: { type: String, required: true },
-    content: { type: String, required: true },
+    heading: { type: String },
+    content: { type: String },
     imageUrl: { type: String, default: "" }
 }, { timestamps: true });
 
