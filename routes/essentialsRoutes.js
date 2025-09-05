@@ -13,10 +13,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Get all essentials (usually one record, but can support multiple)
+// Get all essentials
 router.get("/", async (req, res) => {
   try {
-    const essentials = await Essentials.find().populate("cards.categories");
+    const essentials = await Essentials.find().populate("cards.products");
     res.json(essentials);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -26,13 +26,14 @@ router.get("/", async (req, res) => {
 // Get essentials by ID
 router.get("/:id", async (req, res) => {
   try {
-    const essentials = await Essentials.findById(req.params.id).populate("cards.categories");
+    const essentials = await Essentials.findById(req.params.id).populate("cards.products");
     if (!essentials) return res.status(404).json({ message: "Not found" });
     res.json(essentials);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Update essentials (whole section)
 router.put("/:id", async (req, res) => {
