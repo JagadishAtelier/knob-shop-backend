@@ -1,11 +1,5 @@
 const mongoose = require("mongoose");
 
-const essentialFilterSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  type: { type: String, enum: ["select", "checkbox", "radio", "range"], required: true },
-  options: { type: [String], default: [] }
-}, { _id: false });
-
 const essentialImageSchema = new mongoose.Schema({
   url: {
     type: String,
@@ -36,7 +30,6 @@ const essebtialCategorySchema = new mongoose.Schema({
     default: "https://placehold.co/200x200?text=Category+Banner+Image"
   },
   images: [essentialImageSchema],
-  filters: [essentialFilterSchema],
   subpageType: { 
     type: String,
     default: ""
