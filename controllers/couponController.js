@@ -216,3 +216,33 @@ exports.deleteCoupon = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+exports.getAllofferProducts =  async (req, res) => {
+  try {
+    // Find active coupons that apply to a single product
+    const coupons = await Coupon.find({
+      appliesTo: "single",
+      isActive: true,
+      startDate: { $lte: new Date() },
+      expiryDate: { $gte: new Date() },
+      productId: { $ne: null },
+    }).populate("productId");
+
+    if (!coupons.length) {
+      return res.status(404).json({ message: "No active single-product coupons found" });
+    }
+
+    // Extract the products
+    const products = coupons.map(c => ({
+      couponCode: c.code,
+      discountType: c.type,
+      discountValue: c.value,
+      product: c.productId,
+    }));
+
+    res.json({ products });
+  } catch (error) {
+    console.error("Error fetching active coupon products:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
