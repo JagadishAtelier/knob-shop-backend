@@ -1,5 +1,42 @@
 const mongoose = require("mongoose");
 
+const essentialImageSchema = new mongoose.Schema({
+  url: {
+    type: String,
+    required: true,
+  },
+  altText: {
+    type: String,
+    default: "",
+  }
+}, { _id: false });
+
+const essebtialCategorySchema = new mongoose.Schema({
+  category_name: {
+    type: String,
+    required: true,
+    trim: true,
+    unique: true
+  },
+  description: {
+    type: String
+  },
+  categoryImageUrl: {
+    type: String,
+    default: "https://placehold.co/200x200?text=Category+Image"
+  },
+  bannerImageUrl: {
+    type: String,
+    default: "https://placehold.co/200x200?text=Category+Banner+Image"
+  },
+  images: [essentialImageSchema],
+  subpageType: { 
+    type: String,
+    default: ""
+  }
+}, { _id: false });
+
+
 // Schema for each individual card
 const cardSchema = new mongoose.Schema({
   number: {
@@ -18,12 +55,14 @@ const cardSchema = new mongoose.Schema({
     type: String, // URL to the image uploaded on DigitalOcean Spaces
     required: false,
   },
-  categories: [
+  categories: [essebtialCategorySchema],
+  products : [
     {
-      type: mongoose.Schema.Types.ObjectId, // Use an array for multiple ObjectIds
-      ref: "Category", // The name of the model you are referencing
-    },
-  ],
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }
+
+  ]
 });
 
 // Main schema for the Essentials section
