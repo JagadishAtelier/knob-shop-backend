@@ -1,7 +1,7 @@
 // routes/couponRoutes.js
 const express = require("express");
 const router = express.Router();
-const { createCoupon, validateCoupon, markCouponUsed,getAvailableCoupons,getAllCoupons,deleteCoupon,updateCoupon } = require("../controllers/couponController");
+const { createCoupon, validateCoupon, markCouponUsed,getAvailableCoupons,getAllCoupons,deleteCoupon,updateCoupon,getAllofferProducts } = require("../controllers/couponController");
 const { Frontprotect,protect } = require("../middlewares/authMiddleware");
 const { adminOnly } = require("../middlewares/adminMiddleware");
 
@@ -17,6 +17,7 @@ router.post("/mark-used", Frontprotect, markCouponUsed);
 router.delete("/:id", deleteCoupon);
 router.get("/available", Frontprotect, getAvailableCoupons);
 router.get("/", getAllCoupons);
+router.get("/all", getAllofferProducts);
 
 
 module.exports = router;
