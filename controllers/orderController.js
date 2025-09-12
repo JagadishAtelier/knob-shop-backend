@@ -29,47 +29,64 @@ const createOrderWithShipping = async (req, res) => {
     );
 
     orderData.gstNumber =
-    orderData.gstNumber && orderData.gstNumber.trim()
-      ? orderData.gstNumber.trim()
-      : null;
+      orderData.gstNumber && orderData.gstNumber.trim()
+        ? orderData.gstNumber.trim()
+        : null;
 
-  orderData.companyName =
-    orderData.companyName && orderData.companyName.trim()
-      ? orderData.companyName.trim()
-      : null;
+    orderData.companyName =
+      orderData.companyName && orderData.companyName.trim()
+        ? orderData.companyName.trim()
+        : null;
 
-      
     const newOrder = new Order(orderData);
     await newOrder.save();
 
-    if (orderData.userId && orderData.shippingAddress) {
+    if (orderData.userId) {
       const user = await User.findById(orderData.userId).populate("address");
-      const existingAddress = user?.address;
 
-      const isSameAddress =
-        existingAddress &&
-        normalize(existingAddress.phone) ===
-          normalize(orderData.shippingAddress.phone) &&
-        normalize(existingAddress.street) ===
-          normalize(orderData.shippingAddress.street) &&
-        normalize(existingAddress.city) ===
-          normalize(orderData.shippingAddress.city) &&
-        normalize(existingAddress.district) ===
-          normalize(orderData.shippingAddress.district) &&
-        normalize(existingAddress.pincode) ===
-          normalize(orderData.shippingAddress.pincode) &&
-        normalize(existingAddress.state) ===
-          normalize(orderData.shippingAddress.state);
-
-      if (!isSameAddress) {
-        const newAddress = new Address({
-          ...orderData.shippingAddress,
-          userId: orderData.userId, // ✅ explicitly pass userId
-        });
-        await newAddress.save();
-
-        user.address = newAddress._id;
+      // ✅ Update GST and Company if provided
+      let userUpdated = false;
+      if (orderData.gstNumber) {
+        user.GST = orderData.gstNumber;
+        userUpdated = true;
+      }
+      if (orderData.companyName) {
+        user.company = orderData.companyName;
+        userUpdated = true;
+      }
+      if (userUpdated) {
         await user.save();
+      }
+
+      // ✅ Handle shipping address update
+      if (orderData.shippingAddress) {
+        const existingAddress = user?.address;
+
+        const isSameAddress =
+          existingAddress &&
+          normalize(existingAddress.phone) ===
+            normalize(orderData.shippingAddress.phone) &&
+          normalize(existingAddress.street) ===
+            normalize(orderData.shippingAddress.street) &&
+          normalize(existingAddress.city) ===
+            normalize(orderData.shippingAddress.city) &&
+          normalize(existingAddress.district) ===
+            normalize(orderData.shippingAddress.district) &&
+          normalize(existingAddress.pincode) ===
+            normalize(orderData.shippingAddress.pincode) &&
+          normalize(existingAddress.state) ===
+            normalize(orderData.shippingAddress.state);
+
+        if (!isSameAddress) {
+          const newAddress = new Address({
+            ...orderData.shippingAddress,
+            userId: orderData.userId, // ✅ explicitly pass userId
+          });
+          await newAddress.save();
+
+          user.address = newAddress._id;
+          await user.save();
+        }
       }
     }
     getIO().emit("newOrder", {
@@ -99,13 +116,11 @@ const getAllOrders = async (req, res) => {
     res.status(200).json({ success: true, orders });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch orders",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+      error: error.message,
+    });
   }
 };
 
@@ -126,13 +141,11 @@ const getOrderById = async (req, res) => {
     res.status(200).json({ success: true, order });
   } catch (error) {
     console.error("Error fetching order by ID:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch order",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch order",
+      error: error.message,
+    });
   }
 };
 
@@ -149,22 +162,18 @@ const deleteOrderById = async (req, res) => {
         .json({ success: false, message: "Order not found" });
     }
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Order deleted successfully",
-        deletedOrder,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Order deleted successfully",
+      deletedOrder,
+    });
   } catch (error) {
     console.error("Error deleting order:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to delete order",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete order",
+      error: error.message,
+    });
   }
 };
 
@@ -231,7 +240,6 @@ const updateOrderByOrderId = async (req, res) => {
   }
 };
 
-
 const getOrdersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -272,13 +280,20 @@ const getOrdersByUserId = async (req, res) => {
 // GET /api/admin/notifications
 const getUnseenOrders = async (req, res) => {
   try {
-    const unseenOrders = await Order.find({ seenByAdmin: false })
-      .sort({ createdAt: -1 });
+    const unseenOrders = await Order.find({ seenByAdmin: false }).sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({ success: true, orders: unseenOrders });
   } catch (err) {
     console.error("Error fetching unseen orders:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch unseen orders", error: err.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to fetch unseen orders",
+        error: err.message,
+      });
   }
 };
 
@@ -286,16 +301,27 @@ const getUnseenOrders = async (req, res) => {
 const markOrderAsSeen = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const order = await Order.findByIdAndUpdate(orderId, { seenByAdmin: true }, { new: true });
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { seenByAdmin: true },
+      { new: true }
+    );
+    if (!order)
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     res.status(200).json({ success: true, order });
   } catch (err) {
     console.error("Error marking order as seen:", err);
-    res.status(500).json({ success: false, message: "Failed to update order", error: err.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to update order",
+        error: err.message,
+      });
   }
 };
-
-
 
 module.exports = {
   createOrderWithShipping,
@@ -305,5 +331,5 @@ module.exports = {
   getOrdersByUserId,
   deleteOrderById,
   getUnseenOrders,
-  markOrderAsSeen
+  markOrderAsSeen,
 };
