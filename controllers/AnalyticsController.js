@@ -324,39 +324,55 @@ exports.getChartData = async (req, res) => {
     const now = new Date();
     let startDate = new Date();
 
-    if (filter === "1D") {
-      startDate.setDate(now.getDate() - 1);
-    } else if (filter === "1W") {
-      startDate.setDate(now.getDate() - 7);
-    } else if (filter === "1M") {
-      startDate.setMonth(now.getMonth() - 1);
-    } else {
-      startDate.setFullYear(now.getFullYear() - 1);
+    switch (filter) {
+      case "1D":
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case "1W":
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case "1M":
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case "1Y":
+      default:
+        startDate.setFullYear(now.getFullYear() - 1);
     }
 
     const orders = await Order.find({ createdAt: { $gte: startDate } });
 
-    // group by date/month label depending on filter
     const grouping = {};
+
     orders.forEach((o) => {
+      if (o.status === "cancelled") return; // skip cancelled
+
       const d = new Date(o.createdAt);
       let label;
-      if (filter === "1D")
-        label = d.getHours().toString().padStart(2, "0") + ":00";
-      else if (filter === "1W")
-        label = d.toLocaleString("default", { weekday: "short" });
-      else if (filter === "1M") label = getMonthName(d.getMonth());
-      else label = getMonthName(d.getMonth());
 
-      if (!grouping[label])
-        grouping[label] = { totalSales: 0, totalPurchases: 0 };
-      if (o.status === "delivered") grouping[label].totalSales += o.totalAmount;
-      // if purchases logic exists, apply here similarly
+      if (filter === "1D") {
+        label = d.getHours().toString().padStart(2, "0") + ":00"; // hourly
+      } else if (filter === "1W") {
+        label = d.toLocaleString("default", { weekday: "short" }); // day of week
+      } else if (filter === "1M") {
+        label = d.getDate().toString(); // day of month
+      } else {
+        label = getMonthName(d.getMonth()); // month name
+      }
+
+      if (!grouping[label]) {
+        grouping[label] = { totalSales: 0, totalProductsSold: 0, ordersCount: 0 };
+      }
+
+      grouping[label].totalSales += o.totalAmount || 0;
+      grouping[label].totalProductsSold += o.items.reduce((sum, i) => sum + i.quantity, 0);
+      grouping[label].ordersCount += 1;
     });
 
     const data = Object.entries(grouping).map(([label, stats]) => ({
       label,
-      ...stats,
+      totalSales: stats.totalSales,
+      totalProductsSold: stats.totalProductsSold,
+      averageOrderValue: stats.ordersCount ? stats.totalSales / stats.ordersCount : 0,
     }));
 
     res.json({ data });
@@ -365,3 +381,4 @@ exports.getChartData = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch chart data" });
   }
 };
+
