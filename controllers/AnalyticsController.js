@@ -169,6 +169,7 @@ for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
   }
 };
 // 📌 Get latest analytics snapshot (Dynamic: Daily, Weekly, Monthly, Yearly)
+// 📌 Get latest analytics snapshot (Dynamic: Daily, Weekly, Monthly, Yearly)
 exports.getLatestAnalyticsSnapshot = async (req, res) => {
   try {
     const { range = "Weekly" } = req.query;
@@ -185,9 +186,55 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
 
     // ✅ Total sales for all placed (non-cancelled) orders
     const totalSales = orders.reduce(
-      (acc, order) => (order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc),
+      (acc, order) =>
+        order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc,
       0
     );
+
+    // ✅ Top Selling Products
+    const productSalesMap = {};
+
+    for (const order of orders) {
+      if (order.status !== "cancelled") {
+        for (const item of order.items) {
+          // Fetch actual product
+          const product =
+            (await Product.findById(item.productId)) ||
+            (await Product.findOne({ productId: item.productId.toString() }));
+
+          if (!product) continue; // skip missing products
+
+          const key = product._id.toString();
+          if (!productSalesMap[key]) productSalesMap[key] = { soldQty: 0, revenue: 0 };
+
+          productSalesMap[key].soldQty += item.quantity;
+          productSalesMap[key].revenue += item.quantity * item.price;
+        }
+      }
+    }
+
+    // Sort products by sold quantity
+    const sortedProductIds = Object.entries(productSalesMap).sort(
+      (a, b) => b[1].soldQty - a[1].soldQty
+    );
+
+    const topSellingProducts = [];
+    for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
+      const product = await Product.findById(productId);
+      if (product) {
+        const price =
+          product.variant?.[0]?.sizes?.[0]?.sellingPrice || product.price || 0;
+        topSellingProducts.push({
+          productId: product._id,
+          name: product.name,
+          image: product.images?.[0] || null,
+          price,
+          soldQty: stats.soldQty,
+          revenue: stats.revenue,
+          changeRate: Math.floor(Math.random() * 30),
+        });
+      }
+    }
 
     const result = {
       totalSales,
@@ -201,6 +248,7 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
         confirmed: orders.filter((o) => o.status === "confirmed").length,
         cancelled: orders.filter((o) => o.status === "cancelled").length,
       },
+      topSellingProducts, // ✅ now included
     };
 
     res.json(result);
@@ -209,6 +257,7 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch analytics" });
   }
 };
+
 
 exports.getChartData = async (req, res) => {
   try {
