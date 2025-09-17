@@ -20,6 +20,34 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
       0
     );
 
+// ✅ Dynamic metrics
+
+// 1️⃣ Total Products Sold
+const totalProductsSold = orders.reduce((acc, order) => {
+  if (order.status !== "cancelled") {
+    return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
+  }
+  return acc;
+}, 0);
+
+// 2️⃣ Average Order Value
+const averageOrderValue = orders.length
+  ? totalSales / orders.length
+  : 0;
+
+// 3️⃣ Average Revenue per Customer
+const customerRevenueMap = {};
+orders.forEach((order) => {
+  if (order.status !== "cancelled" && order.userId) {
+    const key = order.userId.toString();
+    customerRevenueMap[key] = (customerRevenueMap[key] || 0) + order.totalAmount;
+  }
+});
+const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
+  ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
+  : 0;
+
+
     // ✅ Monthly sales (Jan - Dec)
     const monthlySales = Array(12).fill(0).map((_, i) => ({
       month: getMonthName(i),
@@ -159,6 +187,9 @@ for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
         positiveFeedbacks: 340,
         negativeFeedbacks: 22,
       },
+      totalProductsSold,
+      averageOrderValue,
+      averageRevenuePerCustomer,
     });
 
     await analytics.save();
@@ -190,6 +221,31 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
         order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc,
       0
     );
+
+    // ✅ Total Products Sold
+const totalProductsSold = orders.reduce((acc, order) => {
+  if (order.status !== "cancelled") {
+    return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
+  }
+  return acc;
+}, 0);
+
+// ✅ Average Order Value
+const averageOrderValue = orders.length
+  ? totalSales / orders.length
+  : 0;
+
+// ✅ Average Revenue per Customer
+const customerRevenueMap = {};
+orders.forEach((order) => {
+  if (order.status !== "cancelled" && order.userId) {
+    const key = order.userId.toString();
+    customerRevenueMap[key] = (customerRevenueMap[key] || 0) + order.totalAmount;
+  }
+});
+const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
+  ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
+  : 0;
 
     // ✅ Top Selling Products
     const productSalesMap = {};
@@ -249,6 +305,9 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
         cancelled: orders.filter((o) => o.status === "cancelled").length,
       },
       topSellingProducts, // ✅ now included
+      totalProductsSold,   // new
+      averageOrderValue,   // new
+      averageRevenuePerCustomer, // new
     };
 
     res.json(result);
