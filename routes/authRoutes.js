@@ -10,6 +10,7 @@ const {
   Check,
   UserLogin,
   UserSignup,
+  deleteUser,
 } = require("../controllers/authController");
 
 const router = express.Router();
@@ -187,5 +188,6 @@ router.get("/users", getAllUsersWithCart);
 router.get("/user/:id", getUserByIdWithCart);
 
 router.put("/:id", updateUser);
+router.delete("/:id",deleteUser);
 
 module.exports = router;
