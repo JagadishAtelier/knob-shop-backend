@@ -7,114 +7,151 @@ const Product = require("../models/Product");
 const getMonthName = (i) =>
   new Date(0, i).toLocaleString("default", { month: "short" });
 
+// 📌 Generate analytics snapshot
 exports.generateAnalyticsSnapshot = async (req, res) => {
   try {
     const orders = await Order.find({});
     const users = await FrontUser.find({});
     const products = await Product.find({});
 
+    // ✅ Total Sales (all placed orders except cancelled)
     const totalSales = orders.reduce(
-      (acc, order) =>
-        acc + (order.status === "delivered" ? order.totalAmount : 0),
-      0
-    );
-    const salesReturn = orders.reduce(
-      (acc, order) =>
-        acc + (order.status === "cancelled" ? order.totalAmount : 0),
+      (acc, order) => (order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc),
       0
     );
 
-    const totalPurchases = 16000;
-    const purchaseReturn = 17000;
-
-    const monthlySales = Array(12)
-      .fill(0)
-      .map((_, i) => ({
-        month: getMonthName(i),
-        totalSales: 0,
-        totalPurchases: 0,
-      }));
+    // ✅ Monthly sales (Jan - Dec)
+    const monthlySales = Array(12).fill(0).map((_, i) => ({
+      month: getMonthName(i),
+      totalSales: 0,
+    }));
 
     orders.forEach((order) => {
-      const month = new Date(order.createdAt).getMonth();
-      if (order.status === "delivered") {
+      if (order.status !== "cancelled") {
+        const month = new Date(order.createdAt).getMonth();
         monthlySales[month].totalSales += order.totalAmount;
       }
     });
 
+    // ✅ Weekly sales (last 7 days)
+    const now = new Date();
+    const weeklySales = Array(7).fill(0).map((_, i) => {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      return {
+        day: d.toLocaleString("default", { weekday: "short" }),
+        totalSales: 0,
+      };
+    }).reverse();
+
+    orders.forEach((order) => {
+      if (order.status !== "cancelled") {
+        const dayIndex = (now.getDay() - new Date(order.createdAt).getDay() + 7) % 7;
+        if (weeklySales[dayIndex]) {
+          weeklySales[dayIndex].totalSales += order.totalAmount;
+        }
+      }
+    });
+
+    // ✅ Yearly sales
+    const yearlySales = {};
+    orders.forEach((order) => {
+      if (order.status !== "cancelled") {
+        const year = new Date(order.createdAt).getFullYear();
+        yearlySales[year] = (yearlySales[year] || 0) + order.totalAmount;
+      }
+    });
+
+    // ✅ Order Status Summary
     const orderStatusSummary = {
       success: orders.filter((o) => o.status === "delivered").length,
       pending: orders.filter((o) => o.status === "pending").length,
-      received: orders.filter((o) => o.status === "confirmed").length,
+      confirmed: orders.filter((o) => o.status === "confirmed").length,
       cancelled: orders.filter((o) => o.status === "cancelled").length,
     };
 
-    const productSalesMap = {};
+    // ✅ Top Selling Products
 
-    orders.forEach((order) => {
-      order.items.forEach((item) => {
-        const key = item.productId.toString();
-        if (!productSalesMap[key]) {
-          productSalesMap[key] = { soldQty: 0, revenue: 0 };
-        }
-        productSalesMap[key].soldQty += item.quantity;
-        productSalesMap[key].revenue += item.quantity * item.price;
-      });
-    });
-    const sortedProductIds = Object.entries(productSalesMap).sort(
-      (a, b) => b[1].soldQty - a[1].soldQty
-    );
+// ✅ Top Selling Products
+// ✅ Top Selling Products
+const productSalesMap = {}; // Initialize map
 
-    let results = [];
+for (const order of orders) {
+  if (order.status !== "cancelled") {
+    for (const item of order.items) {
+      // Fetch the actual product using productId from order
+      const product =
+        await Product.findOne({ _id: item.productId }) ||
+        await Product.findOne({ productId: item.productId.toString() });
 
-    for (const [productId, stats] of sortedProductIds) {
-      if (results.length >= 3) break;
-
-      const product = await Product.findById(productId);
-
-      if (product?.name) {
-        results.push({
-          productId,
-          name: product.name,
-          image:product.images[0],
-          price: product.price || 0,
-          soldQty: stats.soldQty,
-          revenue: stats.revenue,
-          changeRate: Math.floor(Math.random() * 30),
-        });
+      if (!product) {
+        console.log("Missing product for keyId:", item.productId);
+        continue; // skip if product not found
       }
+
+      const key = product._id.toString(); // Use actual MongoDB _id as key
+      console.log("key Id :", key);
+
+      if (!productSalesMap[key]) {
+        productSalesMap[key] = { soldQty: 0, revenue: 0 };
+      }
+
+      productSalesMap[key].soldQty += item.quantity;
+      productSalesMap[key].revenue += item.quantity * item.price;
     }
+  }
+}
 
-    const topSellingProducts = results;
+// Sort products by sold quantity
+const sortedProductIds = Object.entries(productSalesMap).sort(
+  (a, b) => b[1].soldQty - a[1].soldQty
+);
 
-    // ✅ Customers: users who have at least one order
-    const customerIds = [
-      ...new Set(orders.map((o) => o.userId?.toString())),
-    ].filter(Boolean);
+// Build top-selling products array
+const topSellingProducts = [];
+for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
+  const product = await Product.findById(productId);
+  if (product) {
+    const price =
+      product.variant?.[0]?.sizes?.[0]?.sellingPrice || product.price || 0;
+
+    topSellingProducts.push({
+      productId: product._id,
+      name: product.name,
+      image: product.images?.[0] || null,
+      price,
+      soldQty: stats.soldQty,
+      revenue: stats.revenue,
+      changeRate: Math.floor(Math.random() * 30),
+    });
+  } else {
+    console.log("Missing product for keyId:", productId);
+  }
+}
+
+
+
+
+
+    // ✅ Customers count
+    const customerIds = [...new Set(orders.map((o) => o.userId?.toString()))].filter(Boolean);
     const totalCustomers = customerIds.length;
-
-    // ✅ Total registered users
     const totalUsers = users.length;
 
-    // ✅ New users (last 7 days)
-    const now = new Date();
+    // ✅ New customers (last 7 days)
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(now.getDate() - 7);
-    const newUsers = await FrontUser.countDocuments({
-      createdAt: { $gte: oneWeekAgo },
-    });
+    const newCustomers = await FrontUser.countDocuments({ createdAt: { $gte: oneWeekAgo } });
 
     const analytics = new AnalyticsSnapshot({
       totalSales,
-      salesReturn,
-      totalPurchases,
-      purchaseReturn,
       monthlySales,
+      weeklySales,
+      yearlySales,
       totalOrders: orders.length,
-      totalCustomers, // only who ordered
-      totalUsers, // all registered users
-      newUsers,
-      totalSuppliers: 10090,
+      totalCustomers,
+      totalUsers,
+      newCustomers,
       orderStatusSummary,
       topSellingProducts,
       customerSatisfaction: {
@@ -131,128 +168,38 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
+// 📌 Get latest analytics snapshot (Dynamic: Daily, Weekly, Monthly, Yearly)
 exports.getLatestAnalyticsSnapshot = async (req, res) => {
   try {
     const { range = "Weekly" } = req.query;
-
-    // Calculate date range based on 'range'
     const now = new Date();
     let startDate = new Date();
 
-    if (range === "Daily") {
-      startDate.setDate(now.getDate() - 1);
-    } else if (range === "Weekly") {
-      startDate.setDate(now.getDate() - 7);
-    } else if (range === "Monthly") {
-      startDate.setMonth(now.getMonth() - 1);
-    }
+    if (range === "Daily") startDate.setDate(now.getDate() - 1);
+    else if (range === "Weekly") startDate.setDate(now.getDate() - 7);
+    else if (range === "Monthly") startDate.setMonth(now.getMonth() - 1);
+    else if (range === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
 
-    // Fetch data within time range
     const orders = await Order.find({ createdAt: { $gte: startDate } });
     const users = await FrontUser.find({ createdAt: { $gte: startDate } });
 
+    // ✅ Total sales for all placed (non-cancelled) orders
     const totalSales = orders.reduce(
-      (acc, order) =>
-        acc + (order.status === "delivered" ? order.totalAmount : 0),
+      (acc, order) => (order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc),
       0
     );
-    const salesReturn = orders.reduce(
-      (acc, order) =>
-        acc + (order.status === "cancelled" ? order.totalAmount : 0),
-      0
-    );
-
-    const totalPurchases = 16000;
-    const purchaseReturn = 17000;
-    const totalUsers = await FrontUser.countDocuments();
-
-    const monthlySales = Array(12)
-      .fill(0)
-      .map((_, i) => ({
-        month: getMonthName(i),
-        totalSales: 0,
-        totalPurchases: 0,
-      }));
-
-    orders.forEach((order) => {
-      const month = new Date(order.createdAt).getMonth();
-      if (order.status === "delivered") {
-        monthlySales[month].totalSales += order.totalAmount;
-      }
-    });
-
-    const orderStatusSummary = {
-      success: orders.filter((o) => o.status === "delivered").length,
-      pending: orders.filter((o) => o.status === "pending").length,
-      received: orders.filter((o) => o.status === "confirmed").length,
-      cancelled: orders.filter((o) => o.status === "cancelled").length,
-    };
-
-    const productSalesMap = {};
-    for (const order of orders) {
-      for (const item of order.items) {
-        const key = item.productId.toString();
-        if (!productSalesMap[key]) {
-          productSalesMap[key] = { soldQty: 0, revenue: 0 };
-        }
-        productSalesMap[key].soldQty += item.quantity;
-        productSalesMap[key].revenue += item.quantity * item.price;
-      }
-    }
-
-    const sortedProductIds = Object.entries(productSalesMap).sort(
-      (a, b) => b[1].soldQty - a[1].soldQty
-    );
-
-    let results = [];
-
-    for (const [productId, stats] of sortedProductIds) {
-      if (results.length >= 3) break; // stop when we already have 3
-
-      const product = await Product.findById(productId);
-
-      if (product?.name) {
-        results.push({
-          productId,
-          name: product.name,
-          image:product.images[0],
-          price: product.variant[0].sizes[0].sellingPrice || 0,
-          soldQty: stats.soldQty,
-          revenue: stats.revenue,
-          changeRate: Math.floor(Math.random() * 30),
-        });
-      }
-    }
-
-    const topSellingProducts = results;
-    // ✅ Customers: users who have at least one order
-    const customerIds = [
-      ...new Set(orders.map((o) => o.userId?.toString())),
-    ].filter(Boolean);
-    const totalCustomers = customerIds.length;
-    // ✅ Total registered users
-    const newCustomers = users.length;
-    const returningCustomers = (await User.countDocuments()) - newCustomers;
 
     const result = {
       totalSales,
-      salesReturn,
-      totalPurchases,
-      purchaseReturn,
-      monthlySales,
       totalOrders: orders.length,
-      totalCustomers,
-      totalUsers,
-      newCustomers,
-      returningCustomers,
-      totalSuppliers: 10090,
-      orderStatusSummary,
-      topSellingProducts,
-      customerSatisfaction: {
-        averageRating: 4.6,
-        positiveFeedbacks: 340,
-        negativeFeedbacks: 22,
+      totalCustomers: [...new Set(orders.map((o) => o.userId?.toString()))].filter(Boolean).length,
+      totalUsers: await FrontUser.countDocuments(),
+      newCustomers: users.length,
+      orderStatusSummary: {
+        success: orders.filter((o) => o.status === "delivered").length,
+        pending: orders.filter((o) => o.status === "pending").length,
+        confirmed: orders.filter((o) => o.status === "confirmed").length,
+        cancelled: orders.filter((o) => o.status === "cancelled").length,
       },
     };
 
