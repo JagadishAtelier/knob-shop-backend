@@ -2,6 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/FrontUser");
 const Otp = require("../models/otp");
+const axios = require("axios");
 const router = express.Router();
 const transporter = require("../utils/mailer");
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
