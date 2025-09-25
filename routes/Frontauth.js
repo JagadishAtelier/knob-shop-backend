@@ -273,7 +273,7 @@ router.post("/send-otp", async (req, res) => {
 
     await axios.post("https://api.brevo.com/v3/smtp/email", brevoPayload, {
       headers: {
-        "api-key": process.env.MAIL_PASS,
+        "api-key": process.env.MAIL_API_KEY,
         "Content-Type": "application/json",
       },
       timeout: 10000, // 10 seconds
