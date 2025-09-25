@@ -169,6 +169,61 @@ router.put("/:id", async (req, res) => {
 });
 
 const otpStore = new Map();
+// router.post("/send-otp", async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email) return res.status(400).json({ error: "Email is required" });
+
+//     const normalizedEmail = email.trim().toLowerCase();
+
+//     // Optional: Find user for name personalization
+//     const user = await User.findOne({ email: normalizedEmail });
+
+//     // Generate 6-digit OTP
+//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+//     await Otp.deleteMany({ email: normalizedEmail });
+    
+//     // Create a new OTP document
+//     const newOtp = new Otp({
+//       email: normalizedEmail,
+//       otp: otp,
+//     });
+//     await newOtp.save();
+
+//     const mailOptions = {
+//       from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
+//       to: normalizedEmail,
+//       subject: "Your OTP for Knobsshop Login",
+//       text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+//       html: `
+//       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9fafb; color: #333;">
+//         <div style="display: flex; justify-content: center; align-items: center;">
+//           <img src="https://knobsshop.store/assets/logo-CnQfNeT-.png" alt="Knobsshop Logo" style="height: 40px;" />
+//         </div>
+//         <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
+//         <h2 style="color: #aa7e5a;">Knobsshop Login</h2>
+//         <p>Hi ${user?.name || "User"},</p>
+//         <p>We received a request to login. Use the OTP below to continue:</p>
+//         <p style="font-size: 36px; text-align: center; font-weight: bold; color: #e18436; margin: 20px 0;">${otp}</p>
+//         <p>This OTP will expire in <strong>10 minutes</strong>.</p>
+//         <p>If you didn't request this, you can safely ignore this email.</p>
+//         <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
+//         <p style="font-size: 12px; color: #6b7280;">&copy; ${new Date().getFullYear()} KnobsShop. All rights reserved.</p>
+//       </div>
+//       `,
+//     };
+
+//     await transporter.sendMail(mailOptions);
+
+//     res.status(200).json({ message: "OTP sent successfully" });
+//   } catch (err) {
+//     console.error("Send OTP error:", err);
+//     res.status(500).json({ error: "Failed to send OTP" });
+//   }
+// });
+
 router.post("/send-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -181,23 +236,23 @@ router.post("/send-otp", async (req, res) => {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+    // Delete existing OTPs for this email
     await Otp.deleteMany({ email: normalizedEmail });
-    
-    // Create a new OTP document
+
+    // Save new OTP
     const newOtp = new Otp({
       email: normalizedEmail,
       otp: otp,
     });
     await newOtp.save();
 
-    const mailOptions = {
-      from: `"Knobsshop" <${process.env.MAIL_SENDER}>`,
-      to: normalizedEmail,
+    // Send email using Brevo API
+    const brevoPayload = {
+      sender: { name: "Knobsshop", email: process.env.MAIL_SENDER },
+      to: [{ email: normalizedEmail, name: user?.name || "User" }],
       subject: "Your OTP for Knobsshop Login",
-      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-      html: `
+      htmlContent: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9fafb; color: #333;">
         <div style="display: flex; justify-content: center; align-items: center;">
           <img src="https://knobsshop.store/assets/logo-CnQfNeT-.png" alt="Knobsshop Logo" style="height: 40px;" />
@@ -212,14 +267,20 @@ router.post("/send-otp", async (req, res) => {
         <hr style="margin: 20px 0; border: 1px solid #e5e7eb;" />
         <p style="font-size: 12px; color: #6b7280;">&copy; ${new Date().getFullYear()} KnobsShop. All rights reserved.</p>
       </div>
-      `,
+      `
     };
 
-    await transporter.sendMail(mailOptions);
+    await axios.post("https://api.brevo.com/v3/smtp/email", brevoPayload, {
+      headers: {
+        "api-key": process.env.MAIL_PASS,
+        "Content-Type": "application/json",
+      },
+      timeout: 10000, // 10 seconds
+    });
 
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("Send OTP error:", err);
+    console.error("Send OTP error:", err.message || err);
     res.status(500).json({ error: "Failed to send OTP" });
   }
 });
