@@ -2,8 +2,9 @@
 const mongoose = require("mongoose");
 const Counter = require("./Counter");
 
+// models/Order.js
 const orderSchema = new mongoose.Schema({
-  orderId: { type: String, unique: true }, // Auto-generated order ID
+  orderId: { type: String, unique: true },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "FrontUser",
@@ -11,52 +12,49 @@ const orderSchema = new mongoose.Schema({
   },
   items: [
     {
-      productId: {
-        type: String, // <-- fix here
-        required: true
-      },
+      productId: { type: String, required: true },
       productName: { type: String },
       quantity: { type: Number, required: true },
       price: { type: Number, required: true },
-      total: { type: Number }
-    }
+      total: { type: Number },
+    },
   ],
   totalAmount: { type: Number, required: true },
+  discountAmount: { type: Number, default: 0 }, // 💰 discount from coupon
+  finalAmount: { type: Number, required: true }, // total - discount
+  couponCode: { type: String }, // applied coupon code (if any)
   shippingAddress: {
-    type: {
-      name: { type: String },
-      phone: { type: String },
-      street: { type: String },
-      city: { type: String },
-      district: { type: String },
-      pincode: { type: String },
-      state: { type: String },
-    },
-    default: {},
+    name: String,
+    phone: String,
+    street: String,
+    city: String,
+    district: String,
+    pincode: String,
+    state: String,
   },
-  
   dtdcReferenceNumber: { type: String },
   status: {
     type: String,
     enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
-    default: "pending"
+    default: "pending",
   },
   paymentStatus: {
     type: String,
-    enum: ["pending", "success", "failure","refund"],
-    default: "pending"
+    enum: ["pending", "success", "failure", "refund"],
+    default: "pending",
   },
   paymentMethod: {
     type: String,
-    enum: ["cod", "upi", "card", "netbanking","online"],
-    default: "cod"
+    enum: ["cod", "upi", "card", "netbanking", "online"],
+    default: "cod",
   },
   paymentReference: { type: String },
-  gstNumber: { type: String},
-  companyName: { type: String},  
+  gstNumber: { type: String },
+  companyName: { type: String },
   seenByAdmin: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
+
 
 // Pre-save hook to generate auto-incremented orderId like 'ORD-0001'
 orderSchema.pre("save", async function (next) {

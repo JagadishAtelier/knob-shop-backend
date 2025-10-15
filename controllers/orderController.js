@@ -2,50 +2,87 @@
 const Order = require("../models/Order");
 const User = require("../models/FrontUser");
 const Address = require("../models/userAddress");
+const Coupon = require("../models/Coupon");
 const { getIO } = require("../socket");
 const normalize = (str) => str?.trim().toLowerCase();
 const createOrderWithShipping = async (req, res) => {
   try {
     const orderData = req.body;
     console.log("Order Data:", orderData);
-    // Validate order data
-    if (!orderData.userId || !orderData.items) {
+
+    if (!orderData.userId || !orderData.items?.length) {
       return res.status(400).json({ message: "Missing required order data" });
     }
 
-    if (!Array.isArray(orderData.items) || orderData.items.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Order must contain at least one item" });
-    }
-
+    // 🧮 Step 1: Calculate subtotal
     orderData.items.forEach((item) => {
       item.total = item.quantity * item.price;
     });
+    const subtotal = orderData.items.reduce((sum, i) => sum + i.total, 0);
 
-    orderData.totalAmount = orderData.items.reduce(
-      (sum, item) => sum + item.total,
-      0
-    );
+    let discountAmount = 0;
+    let couponUsed = null;
 
-    orderData.gstNumber =
-      orderData.gstNumber && orderData.gstNumber.trim()
-        ? orderData.gstNumber.trim()
-        : null;
+    // 🎟️ Step 2: Handle coupon if provided
+    if (orderData.couponCode) {
+      const code = orderData.couponCode.trim().toUpperCase();
+      const coupon = await Coupon.findOne({ code });
 
-    orderData.companyName =
-      orderData.companyName && orderData.companyName.trim()
-        ? orderData.companyName.trim()
-        : null;
+      if (!coupon)
+        return res.status(400).json({ message: "Invalid coupon code" });
 
+      // Validate coupon status and date
+      const now = new Date();
+      if (!coupon.isActive || now < coupon.startDate || now > coupon.expiryDate)
+        return res
+          .status(400)
+          .json({ message: "Coupon is expired or not active" });
+
+      // Validate product scope
+      if (coupon.appliesTo === "single") {
+        const hasMatchingProduct = orderData.items.some(
+          (i) => i.productId?.toString() === coupon.productId?.toString()
+        );
+        if (!hasMatchingProduct) {
+          return res.status(400).json({
+            message: "This coupon is valid only for a specific product",
+          });
+        }
+      }
+
+      // 💰 Step 3: Calculate discount
+      if (coupon.type === "flat") {
+        discountAmount = coupon.value;
+      } else if (coupon.type === "percentage") {
+        discountAmount = (subtotal * coupon.value) / 100;
+      }
+
+      // Prevent over-discounting
+      discountAmount = Math.min(discountAmount, subtotal);
+      couponUsed = coupon.code;
+    }
+
+    // 💵 Step 4: Final totals
+    const finalAmount = subtotal - discountAmount;
+
+    orderData.totalAmount = subtotal;
+    orderData.discountAmount = discountAmount;
+    orderData.finalAmount = finalAmount;
+    orderData.couponCode = couponUsed;
+
+    // 🧾 Optional business info
+    orderData.gstNumber = orderData.gstNumber?.trim() || null;
+    orderData.companyName = orderData.companyName?.trim() || null;
+
+    // 🛒 Step 5: Save order
     const newOrder = new Order(orderData);
     await newOrder.save();
 
+    // 👤 Step 6: Update user GST/company/address
     if (orderData.userId) {
       const user = await User.findById(orderData.userId).populate("address");
-
-      // ✅ Update GST and Company if provided
       let userUpdated = false;
+
       if (orderData.gstNumber) {
         user.GST = orderData.gstNumber;
         userUpdated = true;
@@ -54,15 +91,11 @@ const createOrderWithShipping = async (req, res) => {
         user.company = orderData.companyName;
         userUpdated = true;
       }
-      if (userUpdated) {
-        await user.save();
-      }
+      if (userUpdated) await user.save();
 
-      // ✅ Handle shipping address update
       if (orderData.shippingAddress) {
         const existingAddress = user?.address;
-
-        const isSameAddress =
+        const isSame =
           existingAddress &&
           normalize(existingAddress.phone) ===
             normalize(orderData.shippingAddress.phone) &&
@@ -70,42 +103,47 @@ const createOrderWithShipping = async (req, res) => {
             normalize(orderData.shippingAddress.street) &&
           normalize(existingAddress.city) ===
             normalize(orderData.shippingAddress.city) &&
-          normalize(existingAddress.district) ===
-            normalize(orderData.shippingAddress.district) &&
           normalize(existingAddress.pincode) ===
             normalize(orderData.shippingAddress.pincode) &&
           normalize(existingAddress.state) ===
             normalize(orderData.shippingAddress.state);
 
-        if (!isSameAddress) {
+        if (!isSame) {
           const newAddress = new Address({
             ...orderData.shippingAddress,
-            userId: orderData.userId, // ✅ explicitly pass userId
+            userId: orderData.userId,
           });
           await newAddress.save();
-
           user.address = newAddress._id;
           await user.save();
         }
       }
     }
+
+    // 🔔 Step 7: Emit socket event
     getIO().emit("newOrder", {
       message: "📦 New Order Placed!",
       orderId: newOrder._id,
-      totalAmount: newOrder.totalAmount,
+      totalAmount: newOrder.finalAmount,
       userId: newOrder.userId,
       createdAt: newOrder.createdAt,
     });
-    res
-      .status(200)
-      .json({ message: "Order and shipping label created", order: newOrder });
+
+    res.status(200).json({
+      success: true,
+      message: "Order created successfully",
+      order: newOrder,
+    });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "Order creation failed", error: error.message });
+    console.error("Error creating order:", error);
+    res.status(500).json({
+      success: false,
+      message: "Order creation failed",
+      error: error.message,
+    });
   }
 };
+
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
