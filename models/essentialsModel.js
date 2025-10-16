@@ -20,7 +20,7 @@ const sliderSchema = new mongoose.Schema({
   subtit: { type: String, default: "" },
   title: { type: String, default: "" },
   description: { type: String, default: "" },
-}, { _id: false });
+});
 
 // Schema for each card
 const cardSchema = new mongoose.Schema({

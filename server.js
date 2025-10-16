@@ -73,7 +73,7 @@ app.use("/api/track", trackingRoutes);
 app.use('/api', consultationRoutes);
 app.use("/", (req, res) => {
   res.send(`
-    <!DOCTYPE html>
+    <!DOCTYPE html> 
     <html lang="en">
     <head>
       <meta charset="UTF-8" />
