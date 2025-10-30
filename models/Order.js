@@ -35,7 +35,7 @@ const orderSchema = new mongoose.Schema({
   dtdcReferenceNumber: { type: String },
   status: {
     type: String,
-    enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+    enum: ["pending", "confirmed", "shipped", "delivered", "cancelled","Return"],
     default: "pending",
   },
   paymentStatus: {

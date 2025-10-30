@@ -218,13 +218,13 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
     // ✅ Total sales for all placed (non-cancelled) orders
     const totalSales = orders.reduce(
       (acc, order) =>
-        order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc,
+        (order.status == "confirmed" && order.paymentStatus == "success") ? acc + (order.totalAmount || 0) : acc,
       0
     );
 
     // ✅ Total Products Sold
 const totalProductsSold = orders.reduce((acc, order) => {
-  if (order.status !== "cancelled") {
+  if (order.status == "confirmed" && order.paymentStatus == "success") {
     return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
   }
   return acc;
@@ -238,7 +238,7 @@ const averageOrderValue = orders.length
 // ✅ Average Revenue per Customer
 const customerRevenueMap = {};
 orders.forEach((order) => {
-  if (order.status !== "cancelled" && order.userId) {
+  if (order.status == "confirmed" && order.paymentStatus == "success" && order.userId) {
     const key = order.userId.toString();
     customerRevenueMap[key] = (customerRevenueMap[key] || 0) + order.totalAmount;
   }
@@ -251,7 +251,7 @@ const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
     const productSalesMap = {};
 
     for (const order of orders) {
-      if (order.status !== "cancelled") {
+      if (order.status == "confirmed" && order.paymentStatus == "success") {
         for (const item of order.items) {
           // Fetch actual product
           const product =
@@ -344,7 +344,7 @@ exports.getChartData = async (req, res) => {
     const grouping = {};
 
     orders.forEach((o) => {
-      if (o.status === "cancelled") return; // skip cancelled
+      if (o.status === "cancelled" || o.status == "pending" || o.paymentStatus !== "success") return; // skip cancelled
 
       const d = new Date(o.createdAt);
       let label;
