@@ -5,6 +5,7 @@ const Otp = require("../models/otp");
 const axios = require("axios");
 const router = express.Router();
 const transporter = require("../utils/mailer");
+const Address = require("../models/userAddress");
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
 router.get("/all-users",async(req,res)=>{
@@ -90,30 +91,78 @@ router.post("/login", async (req, res) => {
 
 // ✅ Signup user
 router.post("/signup", async (req, res) => {
-  const { name, email, phone, password } = req.body;
-  console.log(name, email, phone, password)
+  try {
+    const { name, email, phone, password, gstNumber, companyName , address } = req.body;
+    console.log("Signup Data:", { name, email, phone, password, gstNumber, companyName, address });
 
-  if (!password || (!email && !phone) || !name) {
-    return res.status(400).json({ error: "Missing signup data" });
-  }
+    // --- Validate mandatory fields ---
+    if (!password || (!email && !phone) || !name) {
+      return res.status(400).json({ error: "Missing signup data" });
+    }
 
-  const exists = await User.findOne(email ? { email } : { phone });
-  if (exists) return res.status(409).json({ error: "User already exists" });
+    // --- Check if user already exists ---
+    const exists = await User.findOne(email ? { email } : { phone });
+    if (exists) return res.status(409).json({ error: "User already exists" });
 
-  const user = new User({ name, email, phone, password });
-  await user.save();
+    // --- Create new user ---
+    const user = new User({
+      name,
+      email,
+      phone,
+      password,
+      GST: gstNumber || "",
+      company: companyName || "",
+    });
 
-  const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token,
+    await user.save();
+
+    // --- If address is provided, save it in Address model ---
+    let savedAddress = null;
+    if (address && typeof address === "object") {
+      const { street, city, district, pincode, state } = address;
+
+      if (street && city && district && pincode && state) {
+        const newAddress = new Address({
+          userId: user._id,
+          phone: phone || "",
+          street,
+          city,
+          district,
+          pincode,
+          state,
+        });
+        savedAddress = await newAddress.save();
+
+        // Link address to user
+        user.address.push(savedAddress._id);
+        await user.save();
+      }
+    }
+
+    // --- Generate token ---
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+
+    // --- Respond with full user data ---
+    res.json({
+      token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
+        company: user.company,
+        GST: user.GST,
+        address: savedAddress,
         cartCount: user.cart?.length || 0,
         wishlistCount: user.wishlist?.length || 0,
-      }, });
+      },
+    });
+  } catch (err) {
+    console.error("Signup Error:", err);
+    res.status(500).json({ error: "Server error during signup." });
+  }
 });
+
 
 router.get("/:id", async (req, res) => {
   try {
