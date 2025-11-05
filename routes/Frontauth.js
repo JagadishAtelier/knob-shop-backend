@@ -25,22 +25,42 @@ router.get("/all-users",async(req,res)=>{
 // ✅ Check if user exists
 router.get("/check", async (req, res) => {
   try {
-    const phoneRaw = req.query.phone;
-    const cleanPhone = phoneRaw?.replace(/\s+/g, "").replace(/^(\+)?/, "+");
-    const cleanEmail = req.query.email?.trim()?.toLowerCase();
+    const { email, phone } = req.query;
 
-    const query = req.query.email
-      ? { email: cleanEmail }
-      : { phone: cleanPhone };
+    // Normalize email and phone
+    const cleanEmail = email?.trim()?.toLowerCase();
+    
+    let cleanPhone = phone?.replace(/\s+/g, ""); // just remove spaces, don't add "+"
+    cleanPhone = cleanPhone?.replace(/^0+/, "");
 
-    const user = await User.findOne(query);
+    // Build query conditions
+    const conditions = [];
+    if (cleanEmail) conditions.push({ email: cleanEmail });
+    if (cleanPhone) conditions.push({ phone: cleanPhone });
 
-    res.json({ exists: !!user });
+    if (conditions.length === 0) {
+      return res.status(400).json({ error: "Email or phone required" });
+    }
+
+    // Use $or so both can be checked at once
+    const user = await User.findOne({ $or: conditions });
+
+    // Determine which one exists (optional but useful)
+    let emailExists = false;
+    let phoneExists = false;
+
+    if (user) {
+      if (cleanEmail && user.email === cleanEmail) emailExists = true;
+      if (cleanPhone && user.phone === cleanPhone) phoneExists = true;
+    }
+
+    return res.json({ exists: !!user, emailExists, phoneExists });
   } catch (err) {
     console.error("User check failed:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 });
+
 
 // ✅ Login user
 router.post("/login", async (req, res) => {
@@ -165,7 +185,7 @@ router.post("/signup", async (req, res) => {
 
 
 router.get("/:id", async (req, res) => {
-  try {
+  try { 
     const userId = req.params.id;
 
     const user = await User.findById(userId)
