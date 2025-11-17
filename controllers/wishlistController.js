@@ -42,13 +42,15 @@ exports.removeFromWishlist = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Remove product from wishlist
     user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
-    if (user.wishlist.length === 0) {
-      return res.status(400).json({ message: "Wishlist is empty" });
-    }
+
     await user.save();
 
-    res.status(200).json({ message: "Product removed from wishlist", wishlist: user.wishlist });
+    res.status(200).json({
+      message: "Product removed from wishlist",
+      wishlist: user.wishlist
+    });
   } catch (error) {
     console.error("❌ Error removing from wishlist:", error);
     res.status(500).json({ message: "Failed to remove from wishlist", error });
