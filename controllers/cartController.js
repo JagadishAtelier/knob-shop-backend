@@ -2,21 +2,62 @@ const Cart = require("../models/Cart");
 const User = require("../models/FrontUser");
 const addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    const {
+      userId,
+      productId,
+      quantity,
+      colorName,
+      colorCode,
+      sizeLabel,
+      mrp,
+      discountPercentage,
+      taxPercentage,
+      sellingPrice,
+      image,
+    } = req.body;
 
-    const existingCartItem = await Cart.findOne({ userId, productId });
+    // Check for SAME VARIANT
+    const existingCartItem = await Cart.findOne({
+      userId,
+      productId,
+      colorCode,
+      sizeLabel,
+    });
 
     if (existingCartItem) {
       existingCartItem.quantity += quantity || 1;
       await existingCartItem.save();
-      return res.status(200).json({ message: "Cart updated", cart: existingCartItem });
+      return res.status(200).json({
+        message: "Cart updated",
+        cart: existingCartItem,
+      });
     }
 
-    const cartItem = new Cart({ userId, productId, quantity });
+    // Create NEW variant item
+    const cartItem = new Cart({
+      userId,
+      productId,
+      quantity,
+      colorName,
+      colorCode,
+      sizeLabel,
+      mrp,
+      discountPercentage,
+      taxPercentage,
+      sellingPrice,
+      image,
+    });
+
     await cartItem.save();
-    res.status(201).json({ message: "Added to cart", cart: cartItem });
+    res.status(201).json({
+      message: "Added variant to cart",
+      cart: cartItem,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to add to cart", error });
+    res.status(500).json({
+      message: "Failed to add to cart",
+      error,
+    });
   }
 };
 
@@ -45,7 +86,12 @@ const deleteCartItem = async (req, res) => {
     }
 
     // Delete the cart item for this user and product
-    const deletedItem = await Cart.findOneAndDelete({ userId, productId });
+    const deletedItem = await Cart.findOneAndDelete({
+      userId,
+      productId,
+      colorCode: req.body.colorCode,
+      sizeLabel: req.body.sizeLabel,
+    });
 
     if (!deletedItem) {
       return res.status(404).json({ message: "Cart item not found" });
@@ -53,12 +99,12 @@ const deleteCartItem = async (req, res) => {
 
     res.status(200).json({
       message: "Cart item deleted successfully",
-      item: deletedItem
+      item: deletedItem,
     });
   } catch (error) {
     res.status(500).json({
       message: "Failed to delete cart item",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -66,5 +112,5 @@ const deleteCartItem = async (req, res) => {
 module.exports = {
   addToCart,
   getCartByUserId,
-  deleteCartItem
+  deleteCartItem,
 };
