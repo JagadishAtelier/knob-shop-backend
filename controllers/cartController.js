@@ -14,9 +14,9 @@ const addToCart = async (req, res) => {
       taxPercentage,
       sellingPrice,
       image,
+      mode,  // 👈 NEW (increment | set)
     } = req.body;
 
-    // Check for SAME VARIANT
     const existingCartItem = await Cart.findOne({
       userId,
       productId,
@@ -24,16 +24,33 @@ const addToCart = async (req, res) => {
       sizeLabel,
     });
 
+    // If variant exists
     if (existingCartItem) {
-      existingCartItem.quantity += quantity || 1;
+
+      if (mode === "set") {
+        // ✅ EXACT quantity replace
+        existingCartItem.quantity = quantity;
+      } else {
+        // ✅ Default: Increment
+        existingCartItem.quantity += quantity || 1;
+      }
+
+      // Auto delete if zero or negative
+      if (existingCartItem.quantity <= 0) {
+        await Cart.deleteOne({ _id: existingCartItem._id });
+        return res.status(200).json({
+          message: "Item removed from cart",
+        });
+      }
+
       await existingCartItem.save();
       return res.status(200).json({
-        message: "Cart updated",
+        message: mode === "set" ? "Cart quantity replaced" : "Cart updated",
         cart: existingCartItem,
       });
     }
 
-    // Create NEW variant item
+    // If new item
     const cartItem = new Cart({
       userId,
       productId,
@@ -49,10 +66,12 @@ const addToCart = async (req, res) => {
     });
 
     await cartItem.save();
+
     res.status(201).json({
       message: "Added variant to cart",
       cart: cartItem,
     });
+
   } catch (error) {
     res.status(500).json({
       message: "Failed to add to cart",
@@ -60,6 +79,7 @@ const addToCart = async (req, res) => {
     });
   }
 };
+
 
 const getCartByUserId = async (req, res) => {
   try {
