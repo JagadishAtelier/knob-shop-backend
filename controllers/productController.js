@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const Category = require("../models/Category");
 const Review = require('../models/Review'); 
+const mongoose = require("mongoose")
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
