@@ -238,6 +238,7 @@ const updateOrderByOrderId = async (req, res) => {
       "paymentStatus",
       "shippingStatus",
       "paymentReference",
+      "dtdcReferenceNumber",
       "totalAmount",
     ];
     const invalidFields = Object.keys(updates).filter(
