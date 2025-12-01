@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   addToCart,
   getCartByUserId,
-  deleteCartItem
+  deleteCartItem,
+  clearCart,
 } = require("../controllers/cartController");
 /**
  * @swagger
@@ -88,6 +89,8 @@ router.get("/get/:userId", getCartByUserId);
  *         description: Cart item not found
  */
 router.delete("/delete", deleteCartItem);
+
+router.post("/clear", clearCart);
 
 
 module.exports = router;
