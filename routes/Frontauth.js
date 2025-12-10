@@ -141,7 +141,7 @@ router.post("/signup", async (req, res) => {
     if (address && typeof address === "object") {
       const { street, city, district, pincode, state } = address;
 
-      if (street && city && district && pincode && state) {
+      if (street && city && pincode && state) {
         const newAddress = new Address({
           userId: user._id,
           phone: phone || "",
