@@ -61,4 +61,27 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Update a single card inside essentials.cards[]
+router.put("/:essentialsId/cards/:cardId", async (req, res) => {
+  try {
+    const { essentialsId, cardId } = req.params;
+    const updateData = req.body; // what you want to update (title, desc, images, categories, sliders, etc.)
+
+    const updated = await Essentials.findOneAndUpdate(
+      { _id: essentialsId, "cards._id": cardId },
+      { $set: { "cards.$": { _id: cardId, ...updateData } } },
+      { new: true }
+    ).populate("cards.products");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Card or Essentials not found" });
+    }
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 module.exports = router;

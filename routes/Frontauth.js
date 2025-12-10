@@ -147,7 +147,7 @@ router.post("/signup", async (req, res) => {
           phone: phone || "",
           street,
           city,
-          district,
+          district: district || city,
           pincode,
           state,
         });
