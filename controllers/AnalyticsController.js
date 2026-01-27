@@ -16,36 +16,36 @@ exports.generateAnalyticsSnapshot = async (req, res) => {
 
     // ✅ Total Sales (all placed orders except cancelled)
     const totalSales = orders.reduce(
-      (acc, order) => (order.status !== "cancelled" ? acc + (order.totalAmount || 0) : acc),
+      (acc, order) => (order.status !== "cancelled" ? acc + (order.finalAmount ?? order.totalAmount ?? 0) : acc),
       0
     );
 
-// ✅ Dynamic metrics
+    // ✅ Dynamic metrics
 
-// 1️⃣ Total Products Sold
-const totalProductsSold = orders.reduce((acc, order) => {
-  if (order.status !== "cancelled") {
-    return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
-  }
-  return acc;
-}, 0);
+    // 1️⃣ Total Products Sold
+    const totalProductsSold = orders.reduce((acc, order) => {
+      if (order.status !== "cancelled") {
+        return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
+      }
+      return acc;
+    }, 0);
 
-// 2️⃣ Average Order Value
-const averageOrderValue = orders.length
-  ? totalSales / orders.length
-  : 0;
+    // 2️⃣ Average Order Value
+    const averageOrderValue = orders.length
+      ? totalSales / orders.length
+      : 0;
 
-// 3️⃣ Average Revenue per Customer
-const customerRevenueMap = {};
-orders.forEach((order) => {
-  if (order.status !== "cancelled" && order.userId) {
-    const key = order.userId.toString();
-    customerRevenueMap[key] = (customerRevenueMap[key] || 0) + order.totalAmount;
-  }
-});
-const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
-  ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
-  : 0;
+    // 3️⃣ Average Revenue per Customer
+    const customerRevenueMap = {};
+    orders.forEach((order) => {
+      if (order.status !== "cancelled" && order.userId) {
+        const key = order.userId.toString();
+        customerRevenueMap[key] = (customerRevenueMap[key] || 0) + (order.finalAmount ?? order.totalAmount);
+      }
+    });
+    const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
+      ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
+      : 0;
 
 
     // ✅ Monthly sales (Jan - Dec)
@@ -57,7 +57,7 @@ const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
     orders.forEach((order) => {
       if (order.status !== "cancelled") {
         const month = new Date(order.createdAt).getMonth();
-        monthlySales[month].totalSales += order.totalAmount;
+        monthlySales[month].totalSales += (order.finalAmount ?? order.totalAmount);
       }
     });
 
@@ -76,7 +76,7 @@ const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
       if (order.status !== "cancelled") {
         const dayIndex = (now.getDay() - new Date(order.createdAt).getDay() + 7) % 7;
         if (weeklySales[dayIndex]) {
-          weeklySales[dayIndex].totalSales += order.totalAmount;
+          weeklySales[dayIndex].totalSales += (order.finalAmount ?? order.totalAmount);
         }
       }
     });
@@ -86,7 +86,7 @@ const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
     orders.forEach((order) => {
       if (order.status !== "cancelled") {
         const year = new Date(order.createdAt).getFullYear();
-        yearlySales[year] = (yearlySales[year] || 0) + order.totalAmount;
+        yearlySales[year] = (yearlySales[year] || 0) + (order.finalAmount ?? order.totalAmount);
       }
     });
 
@@ -100,62 +100,62 @@ const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
 
     // ✅ Top Selling Products
 
-// ✅ Top Selling Products
-// ✅ Top Selling Products
-const productSalesMap = {}; // Initialize map
+    // ✅ Top Selling Products
+    // ✅ Top Selling Products
+    const productSalesMap = {}; // Initialize map
 
-for (const order of orders) {
-  if (order.status !== "cancelled") {
-    for (const item of order.items) {
-      // Fetch the actual product using productId from order
-      const product =
-        await Product.findOne({ _id: item.productId }) ||
-        await Product.findOne({ productId: item.productId.toString() });
+    for (const order of orders) {
+      if (order.status !== "cancelled") {
+        for (const item of order.items) {
+          // Fetch the actual product using productId from order
+          const product =
+            await Product.findOne({ _id: item.productId }) ||
+            await Product.findOne({ productId: item.productId.toString() });
 
-      if (!product) {
-        console.log("Missing product for keyId:", item.productId);
-        continue; // skip if product not found
+          if (!product) {
+            console.log("Missing product for keyId:", item.productId);
+            continue; // skip if product not found
+          }
+
+          const key = product._id.toString(); // Use actual MongoDB _id as key
+          console.log("key Id :", key);
+
+          if (!productSalesMap[key]) {
+            productSalesMap[key] = { soldQty: 0, revenue: 0 };
+          }
+
+          productSalesMap[key].soldQty += item.quantity;
+          productSalesMap[key].revenue += item.quantity * item.price;
+        }
       }
-
-      const key = product._id.toString(); // Use actual MongoDB _id as key
-      console.log("key Id :", key);
-
-      if (!productSalesMap[key]) {
-        productSalesMap[key] = { soldQty: 0, revenue: 0 };
-      }
-
-      productSalesMap[key].soldQty += item.quantity;
-      productSalesMap[key].revenue += item.quantity * item.price;
     }
-  }
-}
 
-// Sort products by sold quantity
-const sortedProductIds = Object.entries(productSalesMap).sort(
-  (a, b) => b[1].soldQty - a[1].soldQty
-);
+    // Sort products by sold quantity
+    const sortedProductIds = Object.entries(productSalesMap).sort(
+      (a, b) => b[1].soldQty - a[1].soldQty
+    );
 
-// Build top-selling products array
-const topSellingProducts = [];
-for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
-  const product = await Product.findById(productId);
-  if (product) {
-    const price =
-      product.variant?.[0]?.sizes?.[0]?.sellingPrice || product.price || 0;
+    // Build top-selling products array
+    const topSellingProducts = [];
+    for (const [productId, stats] of sortedProductIds.slice(0, 3)) {
+      const product = await Product.findById(productId);
+      if (product) {
+        const price =
+          product.variant?.[0]?.sizes?.[0]?.sellingPrice || product.price || 0;
 
-    topSellingProducts.push({
-      productId: product._id,
-      name: product.name,
-      image: product.images?.[0] || null,
-      price,
-      soldQty: stats.soldQty,
-      revenue: stats.revenue,
-      changeRate: Math.floor(Math.random() * 30),
-    });
-  } else {
-    console.log("Missing product for keyId:", productId);
-  }
-}
+        topSellingProducts.push({
+          productId: product._id,
+          name: product.name,
+          image: product.images?.[0] || null,
+          price,
+          soldQty: stats.soldQty,
+          revenue: stats.revenue,
+          changeRate: Math.floor(Math.random() * 30),
+        });
+      } else {
+        console.log("Missing product for keyId:", productId);
+      }
+    }
 
 
 
@@ -218,34 +218,34 @@ exports.getLatestAnalyticsSnapshot = async (req, res) => {
     // ✅ Total sales for all placed (non-cancelled) orders
     const totalSales = orders.reduce(
       (acc, order) =>
-        (order.status == "confirmed" && order.paymentStatus == "success") ? acc + (order.totalAmount || 0) : acc,
+        (order.status == "confirmed" && order.paymentStatus == "success") ? acc + (order.finalAmount ?? order.totalAmount ?? 0) : acc,
       0
     );
 
     // ✅ Total Products Sold
-const totalProductsSold = orders.reduce((acc, order) => {
-  if (order.status == "confirmed" && order.paymentStatus == "success") {
-    return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
-  }
-  return acc;
-}, 0);
+    const totalProductsSold = orders.reduce((acc, order) => {
+      if (order.status == "confirmed" && order.paymentStatus == "success") {
+        return acc + order.items.reduce((sum, item) => sum + item.quantity, 0);
+      }
+      return acc;
+    }, 0);
 
-// ✅ Average Order Value
-const averageOrderValue = orders.length
-  ? totalSales / orders.length
-  : 0;
+    // ✅ Average Order Value
+    const averageOrderValue = orders.length
+      ? totalSales / orders.length
+      : 0;
 
-// ✅ Average Revenue per Customer
-const customerRevenueMap = {};
-orders.forEach((order) => {
-  if (order.status == "confirmed" && order.paymentStatus == "success" && order.userId) {
-    const key = order.userId.toString();
-    customerRevenueMap[key] = (customerRevenueMap[key] || 0) + order.totalAmount;
-  }
-});
-const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
-  ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
-  : 0;
+    // ✅ Average Revenue per Customer
+    const customerRevenueMap = {};
+    orders.forEach((order) => {
+      if (order.status == "confirmed" && order.paymentStatus == "success" && order.userId) {
+        const key = order.userId.toString();
+        customerRevenueMap[key] = (customerRevenueMap[key] || 0) + (order.finalAmount ?? order.totalAmount);
+      }
+    });
+    const averageRevenuePerCustomer = Object.keys(customerRevenueMap).length
+      ? Object.values(customerRevenueMap).reduce((a, b) => a + b, 0) / Object.keys(customerRevenueMap).length
+      : 0;
 
     // ✅ Top Selling Products
     const productSalesMap = {};
@@ -363,7 +363,7 @@ exports.getChartData = async (req, res) => {
         grouping[label] = { totalSales: 0, totalProductsSold: 0, ordersCount: 0 };
       }
 
-      grouping[label].totalSales += o.totalAmount || 0;
+      grouping[label].totalSales += o.finalAmount ?? o.totalAmount ?? 0;
       grouping[label].totalProductsSold += o.items.reduce((sum, i) => sum + i.quantity, 0);
       grouping[label].ordersCount += 1;
     });

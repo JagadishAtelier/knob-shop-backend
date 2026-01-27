@@ -2,6 +2,7 @@ const User = require("../models/User");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const generateToken = require("../utils/generateToken");
+const generateRefreshToken = require("../utils/generateRefreshToken");
 const Cart = require("../models/Cart");
 // const admin = require("../utils/firebaseAdmin");
 // REGISTER USER (with profileUrl from frontend)
@@ -70,6 +71,7 @@ exports.login = async (req, res) => {
       email: user.email,
       role: user.role,
       token: generateToken(user._id, user.role),
+      refreshToken: generateRefreshToken(user._id) 
     });
   } catch (err) {
     console.error("Login error:", err);
