@@ -220,227 +220,59 @@ exports.shareProductLink = async (req, res) => {
 
 // @desc Get products by brand name (case-insensitive, handles spaces, etc.)
 exports.getProductsByBrand = async (req, res) => {
-  const { brandName } = req.params;
-  const { page = 1, limit, sortBy, random } = req.query;
-
   try {
-    const size = limit ? parseInt(limit) : 20;
-    const pageNumber = parseInt(page);
-    const skipAmount = (pageNumber - 1) * size;
+    const { brandName } = req.params;
 
-    const regex = new RegExp(brandName.trim(), "i");
+    // Create a case-insensitive regex to match the brand name
+    const regex = new RegExp(brandName.trim(), 'i'); // no ^ and $
 
-    const query = {
-      brand: { $regex: regex },
-    };
 
-    const pipeline = [];
+    const products = await Product.find({ brand: { $regex: regex } })
+      .populate('category')
+      .populate('createdBy', 'name email');
 
-    // 1️⃣ Match brand
-    pipeline.push({ $match: query });
-
-    // 2️⃣ Random
-    if (random === "true") {
-      pipeline.push({ $sample: { size: size } });
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: 'No products found for this brand.' });
     }
 
-    // 3️⃣ Reviews + avgRating
-    pipeline.push(
-      {
-        $lookup: {
-          from: "reviews",
-          localField: "_id",
-          foreignField: "product",
-          as: "reviews",
-        },
-      },
-      {
-        $addFields: {
-          avgRating: {
-            $ifNull: [{ $avg: "$reviews.rating" }, 0],
-          },
-        },
-      },
-      {
-        $project: { reviews: 0 },
-      }
-    );
-
-    // 4️⃣ Category + CreatedBy
-    pipeline.push(
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "frontusers",
-          localField: "createdBy",
-          foreignField: "_id",
-          as: "createdBy",
-        },
-      },
-      { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } }
-    );
-
-    // 5️⃣ Sorting
-    if (sortBy) {
-      const [field, order] = sortBy.split(":");
-      const sortOptions = {};
-      sortOptions[field] = order === "asc" ? 1 : -1;
-      pipeline.push({ $sort: sortOptions });
-    }
-
-    // 6️⃣ Pagination
-    if (random !== "true" && limit) {
-      pipeline.push({ $skip: skipAmount });
-      pipeline.push({ $limit: size });
-    }
-
-    const products = await Product.aggregate(pipeline);
-    const totalProducts = await Product.countDocuments(query);
-
-    res.status(200).json({
-      success: true,
-      data: products,
-      pagination: limit
-        ? {
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / size),
-            currentPage: pageNumber,
-          }
-        : null,
-    });
+    res.status(200).json({ success: true, count: products.length, data: products });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching products by brand:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
 
-
 exports.searchProductsByParam = async (req, res) => {
-  const { query } = req.params;
-  const { page = 1, limit, sortBy, random } = req.query;
+  const { query } = req.params; // or req.query if using ?query=...
 
   if (!query || query.trim() === "") {
-    return res.status(400).json({
-      success: false,
-      message: "Search query is required",
-    });
+    return res.status(400).json({ success: false, message: "Search query is required" });
   }
 
   try {
-    const size = limit ? parseInt(limit) : 20;
-    const pageNumber = parseInt(page);
-    const skipAmount = (pageNumber - 1) * size;
-
-    // Find matching categories first
+    // Find matching categories
     const categories = await Category.find({
       category_name: { $regex: query, $options: "i" },
     }).select("_id");
 
     const categoryIds = categories.map((cat) => cat._id);
 
-    const searchRegex = new RegExp(query, "i");
-
-    const matchQuery = {
+    // Find products by name, category, or brand
+    const products = await Product.find({
       $or: [
-        { name: { $regex: searchRegex } },
-        { brand: { $regex: searchRegex } },
+        { name: { $regex: query, $options: "i" } },
+        { brand: { $regex: query, $options: "i" } },
         { category: { $in: categoryIds } },
-        { productId: { $regex: searchRegex } },
+        { productId: { $regex: query, $options: "i" } },
       ],
-    };
+    })
+      .populate("category")
+      .populate("createdBy", "name email");
 
-    const pipeline = [];
-
-    // 1️⃣ Match
-    pipeline.push({ $match: matchQuery });
-
-    // 2️⃣ Random
-    if (random === "true") {
-      pipeline.push({ $sample: { size: size } });
-    }
-
-    // 3️⃣ Reviews + avgRating
-    pipeline.push(
-      {
-        $lookup: {
-          from: "reviews",
-          localField: "_id",
-          foreignField: "product",
-          as: "reviews",
-        },
-      },
-      {
-        $addFields: {
-          avgRating: {
-            $ifNull: [{ $avg: "$reviews.rating" }, 0],
-          },
-        },
-      },
-      {
-        $project: { reviews: 0 },
-      }
-    );
-
-    // 4️⃣ Category + CreatedBy
-    pipeline.push(
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "frontusers",
-          localField: "createdBy",
-          foreignField: "_id",
-          as: "createdBy",
-        },
-      },
-      { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } }
-    );
-
-    // 5️⃣ Sorting
-    if (sortBy) {
-      const [field, order] = sortBy.split(":");
-      const sortOptions = {};
-      sortOptions[field] = order === "asc" ? 1 : -1;
-      pipeline.push({ $sort: sortOptions });
-    }
-
-    // 6️⃣ Pagination
-    if (random !== "true" && limit) {
-      pipeline.push({ $skip: skipAmount });
-      pipeline.push({ $limit: size });
-    }
-
-    const products = await Product.aggregate(pipeline);
-    const totalProducts = await Product.countDocuments(matchQuery);
-
-    res.status(200).json({
-      success: true,
-      data: products,
-      pagination: limit
-        ? {
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / size),
-            currentPage: pageNumber,
-          }
-        : null,
-    });
+    res.status(200).json({ success: true, results: products });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Search error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
