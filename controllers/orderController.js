@@ -98,15 +98,15 @@ const createOrderWithShipping = async (req, res) => {
         const isSame =
           existingAddress &&
           normalize(existingAddress.phone) ===
-            normalize(orderData.shippingAddress.phone) &&
+          normalize(orderData.shippingAddress.phone) &&
           normalize(existingAddress.street) ===
-            normalize(orderData.shippingAddress.street) &&
+          normalize(orderData.shippingAddress.street) &&
           normalize(existingAddress.city) ===
-            normalize(orderData.shippingAddress.city) &&
+          normalize(orderData.shippingAddress.city) &&
           normalize(existingAddress.pincode) ===
-            normalize(orderData.shippingAddress.pincode) &&
+          normalize(orderData.shippingAddress.pincode) &&
           normalize(existingAddress.state) ===
-            normalize(orderData.shippingAddress.state);
+          normalize(orderData.shippingAddress.state);
 
         if (!isSame) {
           const newAddress = new Address({
@@ -231,6 +231,13 @@ const updateOrderByOrderId = async (req, res) => {
     }
 
     const updates = req.body;
+    if (updates.status) {
+      if (updates.status === "confirmed") {
+        updates.paymentStatus = "success";
+      } else if (updates.status === "pending") {
+        updates.paymentStatus = "pending";
+      }
+    }
 
     // ✅ Restrict updates to allowed fields
     const allowedFields = [
