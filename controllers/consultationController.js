@@ -5,45 +5,93 @@ require('dotenv').config(); // Make sure this is called at the top level
 // POST - Create new consultation
 exports.createConsultation = async (req, res) => {
   try {
-    const consultation = new Consultation(req.body);
-    await consultation.save();
+    // ✅ Destructure data from request body
+    const {
+      location,
+      category,
+      name,
+      mobile,
+      whatsapp,
+      email,
+      budget,
+      interest
+    } = req.body;
 
-    // Nodemailer transporter setup
+    // ✅ Basic validation
+    if (!name || !email || !mobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, Email and Mobile are required"
+      });
+    }
+
+    // ✅ Save to DB
+    const consultation = await Consultation.create({
+      location,
+      category,
+      name,
+      mobile,
+      whatsapp,
+      email,
+      budget,
+      interest
+    });
+
+    console.log("MAIL_HOST:", process.env.MAIL_HOST);
+    console.log("MAIL_PORT:", process.env.MAIL_PORT);
+    console.log("MAIL_USER:", process.env.MAIL_USER);
+    console.log("MAIL_PASS:", process.env.MAIL_PASS);
+    // ✅ Nodemailer transporter (Brevo SMTP)
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.MAIL_HOST,
+      port: Number(process.env.MAIL_PORT),
+      secure: false,
       auth: {
-        user: process.env.EMAIL_USER,       // e.g. youradminemail@gmail.com
-        pass: process.env.EMAIL_PASS,       // App password from Gmail
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
       },
     });
 
-    // Mail content
-    const subject = '📝 New Consultation Booking Received';
+    // ✅ Email content
+    const subject = "📝 New Consultation Booking Received";
+
     const html = `
-      <h2>New Book Consultation User Details From Our Knobsshop</h2>
-      <p><strong>Name:</strong> ${consultation.name}</p>
-      <p><strong>Email:</strong> ${consultation.email}</p>
-      <p><strong>Mobile:</strong> ${consultation.mobile}</p>
-      <p><strong>WhatsApp:</strong> ${consultation.whatsapp ? 'Yes' : 'No'}</p>
-      <p><strong>Location:</strong> ${consultation.location}</p>
-      <p><strong>Category:</strong> ${consultation.category}</p>
-      <p><strong>Budget:</strong> ${consultation.budget}</p>
-      <p><strong>Interest:</strong> ${consultation.interest}</p>
+      <h2>New Consultation Booking - Knobsshop</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Mobile:</strong> ${mobile}</p>
+      <p><strong>WhatsApp:</strong> ${whatsapp ? "Yes" : "No"}</p>
+      <p><strong>Location:</strong> ${location}</p>
+      <p><strong>Category:</strong> ${category}</p>
+      <p><strong>Budget:</strong> ${budget}</p>
+      <p><strong>Interest:</strong> ${interest}</p>
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
     `;
 
-    // Send email to admin
-    await transporter.sendMail({
-      from: `"Knobsshop Booking" <${process.env.EMAIL_USER}>`,
-      to: 'ecom@knobsshop.store', // Replace with actual admin email
+    // ✅ Send mail
+    const info = await transporter.sendMail({
+      from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
+      to: "ecom@knobsshop.store",
       subject,
       html,
     });
 
-    res.status(201).json({ success: true, data: consultation });
+    // ✅ Console log after success
+    console.log("✅ Mail sent successfully");
+    console.log("Message ID:", info.messageId);
+
+    res.status(201).json({
+      success: true,
+      message: "Consultation booked and mail sent successfully",
+      data: consultation,
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Error in createConsultation:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
