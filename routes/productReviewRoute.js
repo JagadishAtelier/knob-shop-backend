@@ -9,7 +9,7 @@ const {
 const { protect } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/upload');
 // Create or Update a Review (userId in body)
-router.post('/:productId',upload.single('image'), createOrUpdateReview);
+router.post('/:productId',createOrUpdateReview);
 
 // Get all reviews for a product
 router.get('/:productId', getReviewsByProduct);

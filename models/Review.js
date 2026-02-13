@@ -19,7 +19,7 @@ const reviewSchema = new mongoose.Schema({
     max: 5,
   },
   comment: String,
-  image: String,
+  image: [String],
   createdAt: {
     type: Date,
     default: Date.now,
