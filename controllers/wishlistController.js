@@ -39,17 +39,23 @@ exports.removeFromWishlist = async (req, res) => {
   try {
     const { userId, productId } = req.params;
 
+    if (!userId || !productId) {
+      return res.status(400).json({ message: "Invalid parameters" });
+    }
+
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Remove product from wishlist
-    user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+    // 🛡 SAFE FILTER (prevent null crash)
+    user.wishlist = user.wishlist.filter(
+      (id) => id && id.toString() !== productId.toString()
+    );
 
     await user.save();
 
     res.status(200).json({
       message: "Product removed from wishlist",
-      wishlist: user.wishlist
+      wishlist: user.wishlist,
     });
   } catch (error) {
     console.error("❌ Error removing from wishlist:", error);
