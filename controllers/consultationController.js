@@ -71,7 +71,7 @@ exports.createConsultation = async (req, res) => {
     // ✅ Send mail
     const info = await transporter.sendMail({
       from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
-      to: "ecom@knobsshop.store",
+      to: "jagadish.atelier@gmail.com",
       subject,
       html,
     });
