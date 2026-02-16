@@ -37,20 +37,8 @@ exports.createConsultation = async (req, res) => {
       interest
     });
 
-    console.log("MAIL_HOST:", process.env.MAIL_HOST);
-    console.log("MAIL_PORT:", process.env.MAIL_PORT);
-    console.log("MAIL_USER:", process.env.MAIL_USER);
-    console.log("MAIL_PASS:", process.env.MAIL_PASS);
     // ✅ Nodemailer transporter (Brevo SMTP)
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: Number(process.env.MAIL_PORT),
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-      },
-    });
+    const transporter = require('../utils/mailer');
 
     // ✅ Email content
     const subject = "📝 New Consultation Booking Received";
@@ -68,22 +56,26 @@ exports.createConsultation = async (req, res) => {
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
     `;
 
-    // ✅ Send mail
-    const info = await transporter.sendMail({
-      from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
-      to: "jagadish.atelier@gmail.com",
-      subject,
-      html,
-    });
-
-    // ✅ Console log after success
-    console.log("✅ Mail sent successfully");
-    console.log("Message ID:", info.messageId);
-
+    // ✅ Respond immediately
     res.status(201).json({
       success: true,
-      message: "Consultation booked and mail sent successfully",
+      message: "Consultation booked successfully",
       data: consultation,
+    });
+
+    // ✅ Send mail (Async / Fire & Forget)
+    setImmediate(async () => {
+      try {
+        const info = await transporter.sendMail({
+          from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
+          to: "ecom@knobsshop.store",
+          subject,
+          html,
+        });
+        console.log("✅ Mail sent successfully. Message ID:", info.messageId);
+      } catch (err) {
+        console.error("❌ Error sending mail:", err.message);
+      }
     });
 
   } catch (error) {

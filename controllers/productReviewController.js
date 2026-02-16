@@ -51,7 +51,7 @@ exports.createOrUpdateReview = async (req, res) => {
       user: userId,
       rating,
       comment,
-      image: imageUrl
+      image: imageUrls
     });
     await review.save();
 
