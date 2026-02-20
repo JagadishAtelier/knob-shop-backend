@@ -1,11 +1,12 @@
 // controllers/consultationController.js
 const Consultation = require('../models/Consultation');
 const nodemailer = require('nodemailer');
-require('dotenv').config(); // Make sure this is called at the top level
+const axios = require('axios');
+require('dotenv').config();
+
 // POST - Create new consultation
 exports.createConsultation = async (req, res) => {
   try {
-    // ✅ Destructure data from request body
     const {
       location,
       category,
@@ -42,7 +43,6 @@ exports.createConsultation = async (req, res) => {
 
     // ✅ Email content
     const subject = "📝 New Consultation Booking Received";
-
     const html = `
       <h2>New Consultation Booking - Knobsshop</h2>
       <p><strong>Name:</strong> ${name}</p>
@@ -56,27 +56,69 @@ exports.createConsultation = async (req, res) => {
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
     `;
 
-    // ✅ Respond immediately
+    // ✅ Send Brevo email
+    try {
+      const info = await transporter.sendMail({
+        from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
+        to: "ecom@knobsshop.store",
+        subject,
+        html,
+      });
+      console.log("✅ Mail sent successfully. Message ID:", info.messageId);
+    } catch (err) {
+      console.error("❌ Error sending mail:", err.message);
+    }
+
+    // ✅ Respond to client
     res.status(201).json({
       success: true,
       message: "Consultation booked successfully",
       data: consultation,
     });
 
-    // ✅ Send mail (Async / Fire & Forget)
-    setImmediate(async () => {
-      try {
-        const info = await transporter.sendMail({
-          from: `"Knobsshop Booking" <${process.env.MAIL_SENDER}>`,
-          to: "ecom@knobsshop.store",
-          subject,
-          html,
+    // ✅ Fire-and-forget: Send to Google Sheet via native https (handles Google's 302 redirect properly)
+    if (process.env.GOOGLE_SHEET_URL) {
+      const https = require('https');
+      const payload = JSON.stringify({ name, email, mobile, whatsapp, location, category, budget, interest });
+      const url = new URL(process.env.GOOGLE_SHEET_URL);
+
+      const makeRequest = (targetUrl) => {
+        const parsedUrl = new URL(targetUrl);
+        const options = {
+          hostname: parsedUrl.hostname,
+          path: parsedUrl.pathname + parsedUrl.search,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+          },
+        };
+
+        const req = https.request(options, (res) => {
+          // Google Apps Script does a 302 redirect — follow it
+          if (res.statusCode === 302 && res.headers.location) {
+            console.log("↩️  Google redirect, following to:", res.headers.location);
+            makeRequest(res.headers.location);
+            return;
+          }
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              console.log("✅ Google Sheet entry saved:", data);
+            } else {
+              console.error(`❌ Google Sheet responded with ${res.statusCode}:`, data);
+            }
+          });
         });
-        console.log("✅ Mail sent successfully. Message ID:", info.messageId);
-      } catch (err) {
-        console.error("❌ Error sending mail:", err.message);
-      }
-    });
+
+        req.on('error', (err) => console.error("❌ Google Sheet request error:", err.message));
+        req.write(payload);
+        req.end();
+      };
+
+      makeRequest(process.env.GOOGLE_SHEET_URL);
+    }
 
   } catch (error) {
     console.error("❌ Error in createConsultation:", error);

@@ -1,13 +1,13 @@
 const Product = require('../models/Product');
 const Category = require("../models/Category");
-const Review = require('../models/Review'); 
+const Review = require('../models/Review');
 const mongoose = require("mongoose")
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
     const product = new Product({
       ...req.body,
-      createdBy: req.user._id, 
+      createdBy: req.user._id,
     });
     const savedProduct = await product.save();
     res.status(201).json(savedProduct);
@@ -129,10 +129,10 @@ exports.getAllProducts = async (req, res) => {
       data: products,
       pagination: limit
         ? {
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / size),
-            currentPage: pageNumber,
-          }
+          totalProducts,
+          totalPages: Math.ceil(totalProducts / size),
+          currentPage: pageNumber,
+        }
         : null,
     });
   } catch (err) {
@@ -179,21 +179,44 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// @desc Get products by category
+// @desc Get products by category (with pagination)
 exports.getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    console.log(`Fetching products for category ID: ${categoryId}`);
-    
+    const { page = 1, limit = 12 } = req.query;
 
-    const products = await Product.find({ category: categoryId })
-      .populate('category') // Populate category details
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+    const skip = (pageNumber - 1) * pageSize;
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ message: 'No products found for this category.' });
+    console.log(`Fetching products for category ID: ${categoryId} | page: ${pageNumber} | limit: ${pageSize}`);
+
+    const totalProducts = await Product.countDocuments({ category: categoryId });
+
+    if (totalProducts === 0) {
+      return res.status(200).json({
+        success: true,
+        products: [],
+        total: 0,
+        pagination: { totalProducts: 0, totalPages: 0, currentPage: pageNumber },
+      });
     }
 
-    res.status(200).json({ success: true, count: products.length, data: products });
+    const products = await Product.find({ category: categoryId })
+      .populate('category')
+      .skip(skip)
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      products,
+      total: totalProducts,
+      pagination: {
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / pageSize),
+        currentPage: pageNumber,
+      },
+    });
   } catch (error) {
     console.error('Error fetching products by category:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -209,7 +232,7 @@ exports.shareProductLink = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
     const shareLink = `https://https://knobsshop.store/${product._id}`;
-    
+
     return res.status(200).json({ shareLink });
   } catch (error) {
     console.error("Error generating share link:", error);
