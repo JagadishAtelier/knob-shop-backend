@@ -2,6 +2,57 @@ const Product = require('../models/Product');
 const Category = require("../models/Category");
 const Review = require('../models/Review');
 const mongoose = require("mongoose")
+
+// 🔥 COMMON FILTER BUILDER
+const buildProductFilter = async (req) => {
+  const {
+    category,
+    brand,
+    minPrice,
+    maxPrice,
+    color,
+    searchQuery,
+  } = req.query;
+
+  const query = {};
+
+  // Category
+  if (category && mongoose.Types.ObjectId.isValid(category)) {
+    query.category = new mongoose.Types.ObjectId(category);
+  }
+
+  // Brand
+  if (brand) {
+    query.brand = { $regex: new RegExp(brand, "i") };
+  }
+
+  // Color inside variant
+  if (color) {
+    query["variant.title"] = { $regex: new RegExp(color, "i") };
+  }
+
+  // Price inside variant.sizes
+  if (minPrice || maxPrice) {
+    query["variant.sizes.sellingPrice"] = {};
+    if (minPrice) {
+      query["variant.sizes.sellingPrice"].$gte = Number(minPrice);
+    }
+    if (maxPrice) {
+      query["variant.sizes.sellingPrice"].$lte = Number(maxPrice);
+    }
+  }
+
+  // Search
+  if (searchQuery) {
+    const regex = new RegExp(searchQuery, "i");
+    query.$or = [
+      { name: { $regex: regex } },
+      { brand: { $regex: regex } },
+    ];
+  }
+
+  return query;
+};
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
@@ -18,44 +69,81 @@ exports.createProduct = async (req, res) => {
 
 
 // @desc Get all products with pagination, filtering, and sorting (with optional random)
+// @desc Get all products with pagination + advanced filtering
 exports.getAllProducts = async (req, res) => {
-  const { page = 1, limit, sortBy, category, searchQuery, random } = req.query;
-
-  const query = {};
-  if (category) {
-    if (!mongoose.Types.ObjectId.isValid(category)) {
-      return res.status(400).json({ message: "Invalid category ID." });
-    }
-    query.category = new mongoose.Types.ObjectId(category);
-  }
-
-  if (searchQuery) {
-    const regex = new RegExp(searchQuery, "i");
-    query.$or = [{ name: { $regex: regex } }, { brand: { $regex: regex } }];
-  }
+  const {
+    page = 1,
+    limit = 20,
+    sortBy,
+    category,
+    searchQuery,
+    random,
+    brand,
+    minPrice,
+    maxPrice,
+    color,
+  } = req.query;
 
   try {
-    let products, totalProducts;
-    const size = limit ? parseInt(limit) : 20;
+    const query = {};
+
+    // ✅ Category filter
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: "Invalid category ID." });
+      }
+      query.category = new mongoose.Types.ObjectId(category);
+    }
+
+    // ✅ Search filter
+    if (searchQuery) {
+      const regex = new RegExp(searchQuery, "i");
+      query.$or = [
+        { name: { $regex: regex } },
+        { brand: { $regex: regex } },
+      ];
+    }
+
+    // ✅ Brand filter
+    if (brand) {
+      query.brand = { $regex: new RegExp(brand, "i") };
+    }
+
+    // ✅ Color filter (inside variant array)
+    if (color) {
+      query["variant.title"] = { $regex: new RegExp(color, "i") };
+    }
+
+    // ✅ Price filter (inside nested sizes array)
+    if (minPrice || maxPrice) {
+      query["variant.sizes.sellingPrice"] = {};
+      if (minPrice) {
+        query["variant.sizes.sellingPrice"].$gte = Number(minPrice);
+      }
+      if (maxPrice) {
+        query["variant.sizes.sellingPrice"].$lte = Number(maxPrice);
+      }
+    }
+
+    const size = parseInt(limit);
     const pageNumber = parseInt(page);
     const skipAmount = (pageNumber - 1) * size;
 
-    // Build the aggregation pipeline
     const pipeline = [];
 
-    // Stage 1: Filter products based on query parameters
+    // 🔹 1. MATCH (Filtering happens FIRST)
     pipeline.push({ $match: query });
 
-    // Stage 2: Add $sample for random products if requested
+    // 🔹 2. Random products
     if (random === "true") {
-      pipeline.push({ $sample: { size: size } });
+      pipeline.push({ $sample: { size } });
     }
 
-    // Stage 3: Look up reviews and calculate average rating
+    // 🔹 3. Reviews lookup
     pipeline.push(
       {
         $lookup: {
-          from: "reviews",  // The name of your reviews collection
+          from: "reviews",
           localField: "_id",
           foreignField: "product",
           as: "reviews",
@@ -64,79 +152,79 @@ exports.getAllProducts = async (req, res) => {
       {
         $addFields: {
           avgRating: {
-            $ifNull: [
-              { $avg: "$reviews.rating" },
-              0
-            ]
-          }
-        }
-      },
-      {
-        $project: {
-          reviews: 0, // Exclude the 'reviews' array from the final output
+            $ifNull: [{ $avg: "$reviews.rating" }, 0],
+          },
         },
-      }
+      },
+      { $project: { reviews: 0 } }
     );
 
-    // Stage 4: Add $lookup for category and createdBy (replaces .populate())
+    // 🔹 4. Category + User lookup
     pipeline.push(
       {
         $lookup: {
-          from: "categories", // The name of your categories collection
+          from: "categories",
           localField: "category",
           foreignField: "_id",
           as: "category",
         },
       },
       {
-        $unwind: { path: "$category", preserveNullAndEmptyArrays: true }
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "frontusers", // The name of your users collection
+          from: "frontusers",
           localField: "createdBy",
           foreignField: "_id",
           as: "createdBy",
         },
       },
       {
-        $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true }
+        $unwind: {
+          path: "$createdBy",
+          preserveNullAndEmptyArrays: true,
+        },
       }
     );
 
-    // Stage 5: Sorting
-    const sortOptions = {};
+    // 🔹 5. Sorting
     if (sortBy) {
       const [field, order] = sortBy.split(":");
-      sortOptions[field] = order === "asc" ? 1 : -1;
-      pipeline.push({ $sort: sortOptions });
+      pipeline.push({
+        $sort: { [field]: order === "asc" ? 1 : -1 },
+      });
     }
 
-    // Stage 6: Pagination (skip and limit) if not a random query
-    if (random !== "true" && limit) {
+    // 🔹 6. Pagination (AFTER FILTERING)
+    if (random !== "true") {
       pipeline.push({ $skip: skipAmount });
       pipeline.push({ $limit: size });
     }
 
-    // Execute the aggregation pipeline
-    products = await Product.aggregate(pipeline);
+    // Execute
+    const products = await Product.aggregate(pipeline);
 
-    // Get the total count of products for pagination (using original query)
-    totalProducts = await Product.countDocuments(query);
+    // Count total after filters
+    const totalProducts = await Product.countDocuments(query);
 
     res.json({
       success: true,
       data: products,
-      pagination: limit
-        ? {
-          totalProducts,
-          totalPages: Math.ceil(totalProducts / size),
-          currentPage: pageNumber,
-        }
-        : null,
+      pagination: {
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / size),
+        currentPage: pageNumber,
+      },
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
 
@@ -185,32 +273,31 @@ exports.getProductsByCategory = async (req, res) => {
     const { categoryId } = req.params;
     const { page = 1, limit = 12 } = req.query;
 
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+
+    const filterQuery = await buildProductFilter(req);
+
+    // Force category filter from params
+    filterQuery.category = new mongoose.Types.ObjectId(categoryId);
+
     const pageNumber = parseInt(page);
     const pageSize = parseInt(limit);
     const skip = (pageNumber - 1) * pageSize;
 
-    console.log(`Fetching products for category ID: ${categoryId} | page: ${pageNumber} | limit: ${pageSize}`);
+    // 🔥 FILTER FIRST
+    const totalProducts = await Product.countDocuments(filterQuery);
 
-    const totalProducts = await Product.countDocuments({ category: categoryId });
-
-    if (totalProducts === 0) {
-      return res.status(200).json({
-        success: true,
-        products: [],
-        total: 0,
-        pagination: { totalProducts: 0, totalPages: 0, currentPage: pageNumber },
-      });
-    }
-
-    const products = await Product.find({ category: categoryId })
-      .populate('category')
+    const products = await Product.find(filterQuery)
+      .populate("category")
+      .populate("createdBy", "name email")
       .skip(skip)
       .limit(pageSize);
 
     res.status(200).json({
       success: true,
-      products,
-      total: totalProducts,
+      data: products,
       pagination: {
         totalProducts,
         totalPages: Math.ceil(totalProducts / pageSize),
@@ -218,8 +305,8 @@ exports.getProductsByCategory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching products by category:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error("Category filter error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
@@ -245,57 +332,88 @@ exports.shareProductLink = async (req, res) => {
 exports.getProductsByBrand = async (req, res) => {
   try {
     const { brandName } = req.params;
+    const { page = 1, limit = 12 } = req.query;
 
-    // Create a case-insensitive regex to match the brand name
-    const regex = new RegExp(brandName.trim(), 'i'); // no ^ and $
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+    const skip = (pageNumber - 1) * pageSize;
 
+    const filterQuery = await buildProductFilter(req);
 
-    const products = await Product.find({ brand: { $regex: regex } })
-      .populate('category')
-      .populate('createdBy', 'name email');
+    // Force brand from params
+    filterQuery.brand = { $regex: new RegExp(brandName.trim(), "i") };
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ message: 'No products found for this brand.' });
-    }
+    const totalProducts = await Product.countDocuments(filterQuery);
 
-    res.status(200).json({ success: true, count: products.length, data: products });
+    const products = await Product.find(filterQuery)
+      .populate("category")
+      .populate("createdBy", "name email")
+      .skip(skip)
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      pagination: {
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / pageSize),
+        currentPage: pageNumber,
+      },
+    });
   } catch (error) {
-    console.error('Error fetching products by brand:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error("Brand filter error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
 
 exports.searchProductsByParam = async (req, res) => {
-  const { query } = req.params; // or req.query if using ?query=...
+  const { query } = req.params;
+  const { page = 1, limit = 12 } = req.query;
 
   if (!query || query.trim() === "") {
-    return res.status(400).json({ success: false, message: "Search query is required" });
+    return res.status(400).json({ message: "Search query required" });
   }
 
   try {
-    // Find matching categories
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+    const skip = (pageNumber - 1) * pageSize;
+
     const categories = await Category.find({
       category_name: { $regex: query, $options: "i" },
     }).select("_id");
 
     const categoryIds = categories.map((cat) => cat._id);
 
-    // Find products by name, category, or brand
-    const products = await Product.find({
-      $or: [
-        { name: { $regex: query, $options: "i" } },
-        { brand: { $regex: query, $options: "i" } },
-        { category: { $in: categoryIds } },
-        { productId: { $regex: query, $options: "i" } },
-      ],
-    })
-      .populate("category")
-      .populate("createdBy", "name email");
+    const filterQuery = await buildProductFilter(req);
 
-    res.status(200).json({ success: true, results: products });
+    filterQuery.$or = [
+      { name: { $regex: query, $options: "i" } },
+      { brand: { $regex: query, $options: "i" } },
+      { category: { $in: categoryIds } },
+      { productId: { $regex: query, $options: "i" } },
+    ];
+
+    const totalProducts = await Product.countDocuments(filterQuery);
+
+    const products = await Product.find(filterQuery)
+      .populate("category")
+      .populate("createdBy", "name email")
+      .skip(skip)
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      pagination: {
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / pageSize),
+        currentPage: pageNumber,
+      },
+    });
   } catch (error) {
     console.error("Search error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ message: "Server Error" });
   }
 };
