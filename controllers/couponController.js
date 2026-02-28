@@ -1,5 +1,6 @@
 const Coupon = require("../models/Coupon");
 const User = require("../models/FrontUser");
+const Order = require("../models/Order");
 
 exports.validateCoupon = async (req, res) => {
   try {
@@ -31,6 +32,14 @@ exports.validateCoupon = async (req, res) => {
 
     if (user.usedCoupons.includes(couponCode.toUpperCase())) {
       return res.status(400).json({ message: "Coupon already used" });
+    }
+
+    // Special logic for KNOBSSHOP25: Only new users (0 past orders)
+    if (couponCode.toUpperCase() === "KNOBSSHOP25") {
+      const pastOrders = await Order.countDocuments({ userId: userId });
+      if (pastOrders > 0) {
+        return res.status(400).json({ message: "This coupon is only valid for new users on their first order" });
+      }
     }
 
     // user.usedCoupons.push(couponCode.toUpperCase());
@@ -217,7 +226,7 @@ exports.deleteCoupon = async (req, res) => {
   }
 };
 
-exports.getAllofferProducts =  async (req, res) => {
+exports.getAllofferProducts = async (req, res) => {
   try {
     // Find active coupons that apply to a single product
     const coupons = await Coupon.find({

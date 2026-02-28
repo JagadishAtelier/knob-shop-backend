@@ -122,6 +122,11 @@ router.post('/', protect, adminOnly, productController.createProduct);
 
 router.get('/', productController.getAllProducts);
 
+// ✅ Specific routes MUST come before the generic /:id route to avoid Express treating them as product IDs
+router.get('/category/:categoryId', productController.getProductsByCategory);
+router.get('/brand/:brandName', productController.getProductsByBrand);
+router.get("/search/:query", productController.searchProductsByParam);
+
 /**
  * @swagger
  * /products/{id}:
@@ -231,10 +236,7 @@ router.delete('/:id', protect, adminOnly, productController.deleteProduct);
  *       500:
  *         description: Server error
  */
-router.get('/category/:categoryId', productController.getProductsByCategory);
-router.get('/brand/:brandName', productController.getProductsByBrand);
-
-router.get("/search/:query", productController.searchProductsByParam);
+// These routes have been moved above the /:id route to prevent conflicts
 
 
 module.exports = router;

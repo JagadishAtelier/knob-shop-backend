@@ -12,6 +12,11 @@ const buildProductFilter = async (req) => {
     maxPrice,
     color,
     searchQuery,
+    page,
+    limit,
+    sortBy,
+    random,
+    ...dynamicFilters
   } = req.query;
 
   const query = {};
@@ -23,12 +28,12 @@ const buildProductFilter = async (req) => {
 
   // Brand
   if (brand) {
-    query.brand = { $regex: new RegExp(brand, "i") };
+    query.brand = { $regex: new RegExp(`^${brand}$`, "i") }; // Exact match but case insensitive
   }
 
   // Color inside variant
   if (color) {
-    query["variant.title"] = { $regex: new RegExp(color, "i") };
+    query["variant.title"] = { $regex: new RegExp(`^${color}$`, "i") };
   }
 
   // Price inside variant.sizes
@@ -51,8 +56,41 @@ const buildProductFilter = async (req) => {
     ];
   }
 
+  // Dynamic Filters mapped to tech_spec
+  const techSpecQueries = [];
+
+  for (const [key, val] of Object.entries(dynamicFilters)) {
+    if (!val) continue;
+
+    // We skip keys starting with min_ or max_ for now as range filters 
+    // over strings inside MongoDB requires complex parsing not suitable here
+    if (key.startsWith("min_") || key.startsWith("max_")) continue;
+
+    const valuesArray = val.split(",").map((v) => new RegExp(`(^| |[^a-zA-Z0-9])${v.trim()}([^a-zA-Z0-9] | |$)`, "i"));
+
+    // We want tech_spec array to contain at least ONE element that matches
+    // Title = the key, Value = IN the values requested
+    techSpecQueries.push({
+      tech_spec: {
+        $elemMatch: {
+          title: new RegExp(`^${key}$`, "i"),
+          value: { $in: valuesArray },
+        },
+      },
+    });
+  }
+
+  if (techSpecQueries.length > 0) {
+    if (query.$and) {
+      query.$and.push(...techSpecQueries);
+    } else {
+      query.$and = techSpecQueries;
+    }
+  }
+
   return query;
 };
+
 // @desc Create a new product
 exports.createProduct = async (req, res) => {
   try {
@@ -75,55 +113,11 @@ exports.getAllProducts = async (req, res) => {
     page = 1,
     limit = 20,
     sortBy,
-    category,
-    searchQuery,
     random,
-    brand,
-    minPrice,
-    maxPrice,
-    color,
   } = req.query;
 
   try {
-    const query = {};
-
-    // ✅ Category filter
-    if (category) {
-      if (!mongoose.Types.ObjectId.isValid(category)) {
-        return res.status(400).json({ message: "Invalid category ID." });
-      }
-      query.category = new mongoose.Types.ObjectId(category);
-    }
-
-    // ✅ Search filter
-    if (searchQuery) {
-      const regex = new RegExp(searchQuery, "i");
-      query.$or = [
-        { name: { $regex: regex } },
-        { brand: { $regex: regex } },
-      ];
-    }
-
-    // ✅ Brand filter
-    if (brand) {
-      query.brand = { $regex: new RegExp(brand, "i") };
-    }
-
-    // ✅ Color filter (inside variant array)
-    if (color) {
-      query["variant.title"] = { $regex: new RegExp(color, "i") };
-    }
-
-    // ✅ Price filter (inside nested sizes array)
-    if (minPrice || maxPrice) {
-      query["variant.sizes.sellingPrice"] = {};
-      if (minPrice) {
-        query["variant.sizes.sellingPrice"].$gte = Number(minPrice);
-      }
-      if (maxPrice) {
-        query["variant.sizes.sellingPrice"].$lte = Number(maxPrice);
-      }
-    }
+    const query = await buildProductFilter(req);
 
     const size = parseInt(limit);
     const pageNumber = parseInt(page);
