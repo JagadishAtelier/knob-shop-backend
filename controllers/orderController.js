@@ -57,7 +57,13 @@ const createOrderWithShipping = async (req, res) => {
       }
 
       if (code === "KNOBSSHOP25") {
-        const pastOrders = await Order.countDocuments({ userId: orderData.userId });
+        const pastOrders = await Order.countDocuments({
+          userId: orderData.userId,
+          $or: [
+            { paymentStatus: "success" },
+            { paymentMethod: "cod", status: { $ne: "cancelled" } }
+          ]
+        });
         if (pastOrders > 0) {
           return res.status(400).json({ message: "This coupon is only valid for new users on their first order" });
         }
@@ -74,11 +80,6 @@ const createOrderWithShipping = async (req, res) => {
       discountAmount = Math.min(discountAmount, subtotal);
       couponUsed = coupon.code;
 
-      // Mark as used
-      if (orderUser && couponUsed) {
-        orderUser.usedCoupons.push(couponUsed);
-        await orderUser.save();
-      }
     }
 
     // 💵 Step 4: Final totals

@@ -36,7 +36,13 @@ exports.validateCoupon = async (req, res) => {
 
     // Special logic for KNOBSSHOP25: Only new users (0 past orders)
     if (couponCode.toUpperCase() === "KNOBSSHOP25") {
-      const pastOrders = await Order.countDocuments({ userId: userId });
+      const pastOrders = await Order.countDocuments({
+        userId: userId,
+        $or: [
+          { paymentStatus: "success" },
+          { paymentMethod: "cod", status: { $ne: "cancelled" } }
+        ]
+      });
       if (pastOrders > 0) {
         return res.status(400).json({ message: "This coupon is only valid for new users on their first order" });
       }
@@ -156,6 +162,12 @@ exports.markCouponUsed = async (req, res) => {
     if (!coupon.usedBy.includes(userId)) {
       coupon.usedBy.push(userId);
       await coupon.save();
+    }
+
+    const user = await User.findById(userId);
+    if (user && !user.usedCoupons.includes(code.toUpperCase())) {
+      user.usedCoupons.push(code.toUpperCase());
+      await user.save();
     }
 
     res.json({ success: true, message: "Coupon marked as used" });

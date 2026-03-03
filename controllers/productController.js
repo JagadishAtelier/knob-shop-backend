@@ -38,13 +38,21 @@ const buildProductFilter = async (req) => {
 
   // Price inside variant.sizes
   if (minPrice || maxPrice) {
-    query["variant.sizes.sellingPrice"] = {};
-    if (minPrice) {
-      query["variant.sizes.sellingPrice"].$gte = Number(minPrice);
-    }
-    if (maxPrice) {
-      query["variant.sizes.sellingPrice"].$lte = Number(maxPrice);
-    }
+    const priceCondition = {};
+    if (minPrice) priceCondition.$gte = Number(minPrice);
+    if (maxPrice) priceCondition.$lte = Number(maxPrice);
+
+    // Using $elemMatch ensures that the SAME size satisfies BOTH $gte and $lte,
+    // rather than one size satisfying $gte and a different size satisfying $lte.
+    query.variant = {
+      $elemMatch: {
+        sizes: {
+          $elemMatch: {
+            sellingPrice: priceCondition
+          }
+        }
+      }
+    };
   }
 
   // Search
