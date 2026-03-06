@@ -28,12 +28,14 @@ const buildProductFilter = async (req) => {
 
   // Brand
   if (brand) {
-    query.brand = { $regex: new RegExp(`^${brand}$`, "i") }; // Exact match but case insensitive
+    const brandsArray = brand.split(",").map(b => new RegExp(`^${b.trim()}$`, "i"));
+    query.brand = { $in: brandsArray };
   }
 
   // Color inside variant
   if (color) {
-    query["variant.title"] = { $regex: new RegExp(`^${color}$`, "i") };
+    const colorsArray = color.split(",").map(c => new RegExp(`^${c.trim()}$`, "i"));
+    query["variant.title"] = { $in: colorsArray };
   }
 
   // Price inside variant.sizes
@@ -74,14 +76,14 @@ const buildProductFilter = async (req) => {
     // over strings inside MongoDB requires complex parsing not suitable here
     if (key.startsWith("min_") || key.startsWith("max_")) continue;
 
-    const valuesArray = val.split(",").map((v) => new RegExp(`(^| |[^a-zA-Z0-9])${v.trim()}([^a-zA-Z0-9] | |$)`, "i"));
+    const valuesArray = val.split(",").map((v) => new RegExp(`(^|[^a-zA-Z0-9])${v.trim()}([^a-zA-Z0-9]|$)`, "i"));
 
     // We want tech_spec array to contain at least ONE element that matches
     // Title = the key, Value = IN the values requested
     techSpecQueries.push({
       tech_spec: {
         $elemMatch: {
-          title: new RegExp(`^${key}$`, "i"),
+          title: new RegExp(`^\\s*${key.trim()}\\s*$`, "i"),
           value: { $in: valuesArray },
         },
       },
